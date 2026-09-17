@@ -2,24 +2,28 @@ package back;
 
 import back.model.*;
 import back.service.AuthService;
+import back.service.ObjetoPerdidoService;
 import back.service.ServicioEstudiantes;
 import back.service.ServicioPuntos;
 import back.service.ServicioRecompensas;
 
-import java.util.ArrayList;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Scanner;
 
 /**
  * Demo interactiva del sistema de puntos: TODO lo pide por consola
- * (correo, contraseña, objetos, categoría, valor, recompensas, etc.).
- * No hay datos de ejemplo quemados en el código; cada dato lo escribe
- * quien ejecuta el programa.
+ * (correo, contraseña, objetos, valor, recompensas, etc.). No hay datos
+ * de ejemplo quemados en el código.
+ *
+ * Trabaja sobre ObjetoPerdido (la clase real del módulo de reportes),
+ * usando ObjetoPerdidoService para publicar objetos igual que lo haría
+ * la pantalla RegistrarObjetoView.
  *
  * OJO: esta clase NO es el Main de la aplicación JavaFX (ese vive en
- * el paquete por defecto y llama a front.login.LoginView, según el
- * pom.xml). Es solo un punto de entrada de prueba, útil para verificar
- * que login + puntos funcionan juntos antes de conectarlos a la UI.
+ * el paquete por defecto y llama a front.login.LoginView).
  *
  * Ejecutar con: java -cp out back.DemoPuntos
  */
@@ -29,8 +33,6 @@ public class DemoPuntos {
     private static final ServicioPuntos SERVICIO_PUNTOS = new ServicioPuntos();
     private static final ServicioRecompensas SERVICIO_RECOMPENSAS = new ServicioRecompensas();
 
-    private static final List<Objeto> OBJETOS = new ArrayList<>();
-    private static int contadorObjetos = 0;
     private static int contadorRecompensas = 0;
 
     public static void main(String[] args) {
@@ -45,7 +47,7 @@ public class DemoPuntos {
             int opcion = leerEntero("Elige una opción: ", 1, 6);
 
             switch (opcion) {
-                case 1 -> registrarObjetoNuevo(estudiante);
+                case 1 -> publicarObjetoPerdido(estudiante);
                 case 2 -> verObjetoExistente(estudiante);
                 case 3 -> devolverObjetoPerdido(estudiante);
                 case 4 -> canjearRecompensa(estudiante);
@@ -118,8 +120,8 @@ public class DemoPuntos {
     private static void mostrarMenu(Estudiante estudiante) {
         System.out.println("\n===================================");
         System.out.println(estudiante);
-        System.out.println("1. Registrar un objeto (perdido/encontrado)");
-        System.out.println("2. Ver un objeto ya registrado");
+        System.out.println("1. Publicar un objeto perdido");
+        System.out.println("2. Ver un objeto ya publicado");
         System.out.println("3. Devolver un objeto perdido");
         System.out.println("4. Canjear una recompensa");
         System.out.println("5. Ver mi historial de puntos");
@@ -130,42 +132,47 @@ public class DemoPuntos {
     // Opciones del menú
     // ---------------------------------------------------------------
 
-    private static void registrarObjetoNuevo(Estudiante estudiante) {
+    private static void publicarObjetoPerdido(Estudiante estudiante) {
         System.out.print("\nNombre del objeto: ");
         String nombre = TECLADO.nextLine().trim();
 
         System.out.print("Descripción: ");
         String descripcion = TECLADO.nextLine().trim();
 
-        CategoriaObjeto categoria = leerCategoria();
+        System.out.print("Lugar donde se perdió: ");
+        String lugar = TECLADO.nextLine().trim();
+
+        System.out.print("Fecha (por ejemplo 2026-09-17): ");
+        String fecha = TECLADO.nextLine().trim();
+
         ValorObjeto valor = leerValor();
-        EstadoObjeto estado = leerEstadoInicial();
 
-        contadorObjetos++;
-        Objeto objeto = new Objeto(
-                "OBJ" + String.format("%03d", contadorObjetos),
-                nombre,
-                descripcion,
-                categoria,
-                valor
-        );
-        objeto.setEstado(estado);
-
-        System.out.print("¿Quieres agregar una foto (ruta o URL)? Deja vacío para omitir: ");
-        String foto = TECLADO.nextLine().trim();
-        if (!foto.isBlank()) {
-            objeto.agregarFoto(foto);
+        System.out.print("Ruta de una imagen en tu computador (deja vacío para usar una de prueba): ");
+        String rutaImagen = TECLADO.nextLine().trim();
+        Path imagen = obtenerRutaImagen(rutaImagen);
+        if (imagen == null) {
+            System.out.println("No se pudo preparar la imagen; se cancela el registro.");
+            return;
         }
 
-        OBJETOS.add(objeto);
+        String resultado = ObjetoPerdidoService.guardarObjeto(
+                nombre, descripcion, lugar, fecha, imagen, estudiante.getCorreo(), valor
+        );
+
+        if (!"OBJETO_GUARDADO".equals(resultado)) {
+            System.out.println("No se pudo publicar el objeto: " + resultado);
+            return;
+        }
+
+        ObjetoPerdido objeto = ObjetoPerdidoService.obtenerUltimoObjeto();
         SERVICIO_PUNTOS.registrarObjeto(estudiante, objeto);
 
-        System.out.println("\nObjeto registrado: " + objeto);
+        System.out.println("\nObjeto publicado: " + objeto);
         System.out.println(estudiante);
     }
 
     private static void verObjetoExistente(Estudiante estudiante) {
-        Objeto objeto = elegirObjeto("ver");
+        ObjetoPerdido objeto = elegirObjeto("ver");
         if (objeto == null) {
             return;
         }
@@ -173,14 +180,12 @@ public class DemoPuntos {
         SERVICIO_PUNTOS.verObjeto(estudiante, objeto);
 
         System.out.println("\n" + objeto);
-        if (!objeto.getFotos().isEmpty()) {
-            System.out.println("Fotos: " + objeto.getFotos());
-        }
+        System.out.println("Imagen: " + objeto.getImagen());
         System.out.println(estudiante);
     }
 
     private static void devolverObjetoPerdido(Estudiante estudiante) {
-        Objeto objeto = elegirObjeto("devolver");
+        ObjetoPerdido objeto = elegirObjeto("devolver");
         if (objeto == null) {
             return;
         }
@@ -231,34 +236,25 @@ public class DemoPuntos {
     // Utilidades de lectura por consola
     // ---------------------------------------------------------------
 
-    private static Objeto elegirObjeto(String accion) {
-        if (OBJETOS.isEmpty()) {
-            System.out.println("\nTodavía no hay objetos registrados. Registra uno primero.");
+    private static ObjetoPerdido elegirObjeto(String accion) {
+        List<ObjetoPerdido> objetos = ObjetoPerdidoService.obtenerObjetos();
+        if (objetos.isEmpty()) {
+            System.out.println("\nTodavía no hay objetos publicados. Publica uno primero.");
             return null;
         }
 
         System.out.println("\nObjetos disponibles para " + accion + ":");
-        for (int i = 0; i < OBJETOS.size(); i++) {
-            System.out.println((i + 1) + ". " + OBJETOS.get(i));
+        for (int i = 0; i < objetos.size(); i++) {
+            System.out.println((i + 1) + ". " + objetos.get(i));
         }
 
-        int indice = leerEntero("Elige un objeto (número): ", 1, OBJETOS.size());
-        return OBJETOS.get(indice - 1);
-    }
-
-    private static CategoriaObjeto leerCategoria() {
-        CategoriaObjeto[] categorias = CategoriaObjeto.values();
-        System.out.println("Categoría:");
-        for (int i = 0; i < categorias.length; i++) {
-            System.out.println((i + 1) + ". " + categorias[i]);
-        }
-        int indice = leerEntero("Elige una categoría (número): ", 1, categorias.length);
-        return categorias[indice - 1];
+        int indice = leerEntero("Elige un objeto (número): ", 1, objetos.size());
+        return objetos.get(indice - 1);
     }
 
     private static ValorObjeto leerValor() {
         ValorObjeto[] valores = ValorObjeto.values();
-        System.out.println("Valor estimado del objeto:");
+        System.out.println("¿Qué tan valioso es el objeto?");
         for (int i = 0; i < valores.length; i++) {
             System.out.println((i + 1) + ". " + valores[i]);
         }
@@ -266,12 +262,23 @@ public class DemoPuntos {
         return valores[indice - 1];
     }
 
-    private static EstadoObjeto leerEstadoInicial() {
-        System.out.println("¿El objeto está perdido o ya lo encontraron?");
-        System.out.println("1. " + EstadoObjeto.PERDIDO);
-        System.out.println("2. " + EstadoObjeto.ENCONTRADO);
-        int indice = leerEntero("Elige una opción: ", 1, 2);
-        return indice == 1 ? EstadoObjeto.PERDIDO : EstadoObjeto.ENCONTRADO;
+    private static Path obtenerRutaImagen(String rutaEscrita) {
+        if (!rutaEscrita.isBlank()) {
+            Path ruta = Path.of(rutaEscrita);
+            if (Files.exists(ruta)) {
+                return ruta;
+            }
+            System.out.println("Esa ruta no existe. Se usará una imagen de prueba en su lugar.");
+        }
+
+        try {
+            Path temporal = Files.createTempFile("demo-objeto", ".jpg");
+            Files.writeString(temporal, "imagen de prueba");
+            return temporal;
+        } catch (IOException e) {
+            System.out.println("No se pudo crear una imagen de prueba: " + e.getMessage());
+            return null;
+        }
     }
 
     private static int leerEntero(String mensaje, int minimo, int maximo) {
