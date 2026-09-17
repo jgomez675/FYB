@@ -69,7 +69,7 @@ public class RegistrarObjetoView {
                     descripcion.getText(),
                     lugar.getText(),
                     fecha.getValue() == null ? "" : fecha.getValue().toString(),
-                    archivo[0],
+                    archivo[0] == null ? null : archivo[0].toPath(),
                     usuario.getCorreo()
             );
 
