@@ -41,28 +41,33 @@
             </resource>
         </resources>
 
-        <plugins>
+       <plugins>
 
-            <!-- Compilador Java -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
-            </plugin>
+    <!-- Compilador Java -->
+    <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
 
-            <!-- Ejecutar JavaFX -->
-            <plugin>
-                <groupId>org.openjfx</groupId>
-                <artifactId>javafx-maven-plugin</artifactId>
-                <version>0.0.8</version>
+        <configuration>
+            <excludes>
+                <exclude>back/DemoPuntos.java</exclude>
+            </excludes>
+        </configuration>
+    </plugin>
 
-                <configuration>
-                    <mainClass>Main</mainClass>
-                </configuration>
+    <!-- Ejecutar JavaFX -->
+    <plugin>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-maven-plugin</artifactId>
+        <version>0.0.8</version>
 
-            </plugin>
+        <configuration>
+            <mainClass>Main</mainClass>
+        </configuration>
+    </plugin>
 
-        </plugins>
+</plugins>
 
     </build>
 

@@ -3,6 +3,7 @@ package front.login;
 import back.model.Usuario;
 import back.service.AuthService;
 import front.register.RegisterView;
+import front.objetos.ObjetosView;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -100,6 +101,9 @@ public class LoginView extends Application {
 
                 mensaje.getStyleClass().removeAll("error");
                 mensaje.getStyleClass().add("exito");
+
+                ObjetosView objetosView = new ObjetosView();
+                objetosView.mostrar(stage, usuario);
 
             } else {
 
