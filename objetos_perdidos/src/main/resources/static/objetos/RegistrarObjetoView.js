@@ -13,22 +13,68 @@
 
       const hoy = hoyISO();
       const mensaje = h("p", { class: "msg", role: "alert" });
-      const nombre = campo({ id: "nombre", etiqueta: "Nombre del objeto", autocomplete: "off" });
-      const descripcion = campo({ id: "descripcion", etiqueta: "Descripción detallada", tag: "textarea", rows: "4" });
-      const lugar = campo({ id: "lugar", etiqueta: "Lugar donde se perdió", autocomplete: "off" });
-      const fecha = campo({ id: "fecha", etiqueta: "Fecha", type: "date", value: hoy, max: hoy });
+
+      const nombre = campo({
+        id: "nombre",
+        etiqueta: "Nombre del objeto",
+        autocomplete: "off"
+      });
+
+      const descripcion = campo({
+        id: "descripcion",
+        etiqueta: "Descripción detallada",
+        tag: "textarea",
+        rows: "4"
+      });
+
+      const lugar = campo({
+        id: "lugar",
+        etiqueta: "Lugar donde se perdió",
+        autocomplete: "off"
+      });
+
+      const fecha = campo({
+        id: "fecha",
+        etiqueta: "Fecha",
+        type: "date",
+        value: hoy,
+        max: hoy
+      });
+
+      const caracteristicaPrivada = campo({
+        id: "caracteristicaPrivada",
+        etiqueta: "Característica privada del objeto",
+        tag: "textarea",
+        rows: "3",
+        autocomplete: "off"
+      });
 
       let archivo = null;
       let urlVistaPrevia = null;
-      const seleccionar = h("input", { id: "imagen", name: "imagen", type: "file", accept: "image/*" });
-      const vistaPrevia = h("img", { class: "preview", alt: "Vista previa de la imagen seleccionada", hidden: true });
+
+      const seleccionar = h("input", {
+        id: "imagen",
+        name: "imagen",
+        type: "file",
+        accept: "image/*"
+      });
+
+      const vistaPrevia = h("img", {
+        class: "preview",
+        alt: "Vista previa de la imagen seleccionada",
+        hidden: true
+      });
 
       seleccionar.addEventListener("change", () => {
-        archivo = seleccionar.files && seleccionar.files[0] ? seleccionar.files[0] : null;
+        archivo = seleccionar.files && seleccionar.files[0]
+          ? seleccionar.files[0]
+          : null;
+
         if (urlVistaPrevia) {
           URL.revokeObjectURL(urlVistaPrevia);
           urlVistaPrevia = null;
         }
+
         if (archivo) {
           urlVistaPrevia = URL.createObjectURL(archivo);
           vistaPrevia.src = urlVistaPrevia;
@@ -39,16 +85,54 @@
         }
       });
 
-      const publicar = h("button", { class: "btn btn-primary", type: "submit" }, "Publicar objeto");
+      const publicar = h(
+        "button",
+        {
+          class: "btn btn-primary",
+          type: "submit"
+        },
+        "Publicar objeto"
+      );
+
       const formulario = h(
         "form",
-        { class: "form", novalidate: true },
+        {
+          class: "form",
+          novalidate: true
+        },
+
         nombre.wrap,
         descripcion.wrap,
         lugar.wrap,
         fecha.wrap,
-        h("div", { class: "field" }, h("label", { for: "imagen" }, "Foto del objeto"), seleccionar, vistaPrevia),
-        h("div", { class: "actions" }, publicar, h("a", { class: "btn btn-secondary", href: "#/objetos" }, "Volver")),
+        caracteristicaPrivada.wrap,
+
+        h(
+          "div",
+          { class: "field" },
+          h(
+            "label",
+            { for: "imagen" },
+            "Foto del objeto"
+          ),
+          seleccionar,
+          vistaPrevia
+        ),
+
+        h(
+          "div",
+          { class: "actions" },
+          publicar,
+          h(
+            "a",
+            {
+              class: "btn btn-secondary",
+              href: "#/objetos"
+            },
+            "Volver"
+          )
+        ),
+
         mensaje
       );
 
@@ -56,34 +140,66 @@
         evento.preventDefault();
 
         ocupado(publicar, true);
+
         try {
           const resultado = await ObjetosApi.guardarObjeto(
             nombre.control.value,
             descripcion.control.value,
             lugar.control.value,
             fecha.control.value,
-            archivo
+            archivo,
+            caracteristicaPrivada.control.value
           );
 
           if (resultado === ObjetosApi.OBJETO_GUARDADO) {
-            guardarAviso("Objeto publicado correctamente.");
+            guardarAviso(
+              "Objeto publicado correctamente."
+            );
+
             irA("#/objetos");
           } else {
-            mostrarMensaje(mensaje, resultado, "error");
+            mostrarMensaje(
+              mensaje,
+              resultado,
+              "error"
+            );
           }
+
         } catch (error) {
+
           if (error.estado === 401) {
-            guardarAviso(error.message, "error");
+            guardarAviso(
+              error.message,
+              "error"
+            );
+
             irA("#/login");
           } else {
-            mostrarMensaje(mensaje, error.message, "error");
+            mostrarMensaje(
+              mensaje,
+              error.message,
+              "error"
+            );
           }
+
         } finally {
           ocupado(publicar, false);
         }
       });
 
-      return pantalla(usuario, h("section", { class: "card form-card" }, h("h1", {}, "Publicar objeto perdido"), formulario));
+      return pantalla(
+        usuario,
+        h(
+          "section",
+          { class: "card form-card" },
+          h(
+            "h1",
+            {},
+            "Publicar objeto perdido"
+          ),
+          formulario
+        )
+      );
     }
   }
 

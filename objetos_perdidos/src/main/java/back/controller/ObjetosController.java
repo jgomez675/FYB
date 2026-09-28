@@ -73,6 +73,9 @@ public class ObjetosController {
 
         String imagen = texto(cuerpo, "imagen");
 
+        String caracteristicaPrivada =
+                texto(cuerpo, "caracteristicaPrivada");
+
         Path temporal = null;
 
         try {
@@ -106,7 +109,8 @@ public class ObjetosController {
                             texto(cuerpo, "lugar"),
                             texto(cuerpo, "fecha"),
                             temporal,
-                            sesion.correo()
+                            sesion.correo(),
+                            caracteristicaPrivada
                     );
 
             if (!ObjetoPerdidoService.OBJETO_GUARDADO.equals(resultado)) {
@@ -194,6 +198,10 @@ public class ObjetosController {
         resultado.put("fecha", objeto.getFecha());
         resultado.put("imagenUrl", imagenUrl);
         resultado.put("correoUsuario", objeto.getCorreoUsuario());
+
+        // IMPORTANTE:
+        // NO agregamos caracteristicaPrivada aquí.
+        // Por eso no se muestra públicamente.
 
         return resultado;
     }

@@ -29,22 +29,53 @@ public class ObjetoPerdidoService {
 
         try (BufferedReader lector = Files.newBufferedReader(ARCHIVO_OBJETOS)) {
             String linea;
+
             while ((linea = lector.readLine()) != null) {
-                if (linea.isBlank()) continue;
+                if (linea.isBlank()) {
+                    continue;
+                }
 
                 String[] partes = linea.split("\\|", -1);
+
+                // Objetos antiguos: no tenían característica privada
                 if (partes.length == 7) {
                     try {
                         objetos.add(new ObjetoPerdido(
-                                Integer.parseInt(partes[0]), partes[1], partes[2], partes[3],
-                                partes[4], partes[5], partes[6]
+                                Integer.parseInt(partes[0]),
+                                partes[1],
+                                partes[2],
+                                partes[3],
+                                partes[4],
+                                partes[5],
+                                partes[6],
+                                ""
+                        ));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+
+                // Objetos nuevos: tienen característica privada
+                if (partes.length == 8) {
+                    try {
+                        objetos.add(new ObjetoPerdido(
+                                Integer.parseInt(partes[0]),
+                                partes[1],
+                                partes[2],
+                                partes[3],
+                                partes[4],
+                                partes[5],
+                                partes[6],
+                                partes[7]
                         ));
                     } catch (NumberFormatException ignored) {
                     }
                 }
             }
+
         } catch (IOException e) {
-            System.err.println("No se pudieron cargar los objetos: " + e.getMessage());
+            System.err.println(
+                    "No se pudieron cargar los objetos: " + e.getMessage()
+            );
         }
     }
 
@@ -58,6 +89,7 @@ public class ObjetoPerdidoService {
                 return objeto;
             }
         }
+
         return null;
     }
 
@@ -67,21 +99,57 @@ public class ObjetoPerdidoService {
 
     public static final String OBJETO_GUARDADO = "OBJETO_GUARDADO";
 
-    public static String guardarObjeto(String nombre, String descripcion, String lugar,
-                                       String fecha, Path imagenOriginal, String correoUsuario) {
-        if (nombre == null || nombre.isBlank()) return "El nombre del objeto es obligatorio.";
-        if (descripcion == null || descripcion.isBlank()) return "La descripción es obligatoria.";
-        if (lugar == null || lugar.isBlank()) return "El lugar es obligatorio.";
-        if (fecha == null || fecha.isBlank()) return "La fecha es obligatoria.";
-        if (imagenOriginal == null) return "Debes seleccionar una imagen.";
+    public static String guardarObjeto(
+            String nombre,
+            String descripcion,
+            String lugar,
+            String fecha,
+            Path imagenOriginal,
+            String correoUsuario,
+            String caracteristicaPrivada) {
+
+        if (nombre == null || nombre.isBlank()) {
+            return "El nombre del objeto es obligatorio.";
+        }
+
+        if (descripcion == null || descripcion.isBlank()) {
+            return "La descripción es obligatoria.";
+        }
+
+        if (lugar == null || lugar.isBlank()) {
+            return "El lugar es obligatorio.";
+        }
+
+        if (fecha == null || fecha.isBlank()) {
+            return "La fecha es obligatoria.";
+        }
+
+        if (imagenOriginal == null) {
+            return "Debes seleccionar una imagen.";
+        }
+
+        if (caracteristicaPrivada == null || caracteristicaPrivada.isBlank()) {
+            return "La característica privada es obligatoria.";
+        }
 
         try {
             Files.createDirectories(CARPETA_IMAGENES);
 
             int id = obtenerSiguienteId();
-            String extension = obtenerExtension(imagenOriginal.getFileName().toString());
-            Path destino = CARPETA_IMAGENES.resolve("objeto_" + id + extension);
-            Files.copy(imagenOriginal, destino, StandardCopyOption.REPLACE_EXISTING);
+
+            String extension = obtenerExtension(
+                    imagenOriginal.getFileName().toString()
+            );
+
+            Path destino = CARPETA_IMAGENES.resolve(
+                    "objeto_" + id + extension
+            );
+
+            Files.copy(
+                    imagenOriginal,
+                    destino,
+                    StandardCopyOption.REPLACE_EXISTING
+            );
 
             ObjetoPerdido objeto = new ObjetoPerdido(
                     id,
@@ -90,12 +158,15 @@ public class ObjetoPerdidoService {
                     limpiar(lugar),
                     limpiar(fecha),
                     destino.toString(),
-                    limpiar(correoUsuario)
+                    limpiar(correoUsuario),
+                    limpiar(caracteristicaPrivada)
             );
 
             objetos.add(objeto);
+
             guardarObjetos();
-            return "OBJETO_GUARDADO";
+
+            return OBJETO_GUARDADO;
 
         } catch (IOException e) {
             return "No se pudo guardar el objeto: " + e.getMessage();
@@ -103,37 +174,64 @@ public class ObjetoPerdidoService {
     }
 
     private static void guardarObjetos() throws IOException {
-        Path carpeta = ARCHIVO_OBJETOS.getParent();
-        if (carpeta != null) Files.createDirectories(carpeta);
 
-        try (BufferedWriter escritor = Files.newBufferedWriter(ARCHIVO_OBJETOS)) {
+        Path carpeta = ARCHIVO_OBJETOS.getParent();
+
+        if (carpeta != null) {
+            Files.createDirectories(carpeta);
+        }
+
+        try (BufferedWriter escritor =
+                     Files.newBufferedWriter(ARCHIVO_OBJETOS)) {
+
             for (ObjetoPerdido objeto : objetos) {
+
                 escritor.write(
-                        objeto.getId() + "|" + objeto.getNombre() + "|" +
-                        objeto.getDescripcion() + "|" + objeto.getLugar() + "|" +
-                        objeto.getFecha() + "|" + objeto.getImagen() + "|" +
-                        objeto.getCorreoUsuario()
+                        objeto.getId() + "|" +
+                        objeto.getNombre() + "|" +
+                        objeto.getDescripcion() + "|" +
+                        objeto.getLugar() + "|" +
+                        objeto.getFecha() + "|" +
+                        objeto.getImagen() + "|" +
+                        objeto.getCorreoUsuario() + "|" +
+                        objeto.getCaracteristicaPrivada()
                 );
+
                 escritor.newLine();
             }
         }
     }
 
     private static int obtenerSiguienteId() {
+
         int mayor = 0;
+
         for (ObjetoPerdido objeto : objetos) {
-            if (objeto.getId() > mayor) mayor = objeto.getId();
+            if (objeto.getId() > mayor) {
+                mayor = objeto.getId();
+            }
         }
+
         return mayor + 1;
     }
 
     private static String limpiar(String texto) {
-        return texto.trim().replace("|", "/").replace("\n", " ").replace("\r", " ");
+
+        return texto
+                .trim()
+                .replace("|", "/")
+                .replace("\n", " ")
+                .replace("\r", " ");
     }
 
     private static String obtenerExtension(String nombre) {
+
         int punto = nombre.lastIndexOf('.');
-        if (punto >= 0) return nombre.substring(punto).toLowerCase();
+
+        if (punto >= 0) {
+            return nombre.substring(punto).toLowerCase();
+        }
+
         return ".jpg";
     }
 }
