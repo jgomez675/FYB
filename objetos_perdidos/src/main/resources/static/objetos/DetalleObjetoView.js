@@ -173,6 +173,59 @@
         }
       );
 
+      const reporteMensaje = h("p", { class: "msg", role: "alert" });
+      const motivo = h("select", { class: "control" },
+        h("option", { value: "" }, "Selecciona un motivo"),
+        h("option", { value: "Información falsa" }, "Información falsa"),
+        h("option", { value: "Contenido inapropiado" }, "Contenido inapropiado"),
+        h("option", { value: "Objeto duplicado" }, "Objeto duplicado"),
+        h("option", { value: "Otro" }, "Otro")
+      );
+      const detalleReporte = h("textarea", {
+        class: "control",
+        rows: "3",
+        placeholder: "Cuéntanos brevemente qué está mal en la publicación..."
+      });
+      const enviarReporte = h("button", { class: "btn btn-secondary", type: "button" }, "Enviar reporte");
+
+      enviarReporte.addEventListener("click", async () => {
+        if (!motivo.value) {
+          mostrarMensaje(reporteMensaje, "Selecciona un motivo para el reporte.", "error");
+          return;
+        }
+
+        ocupado(enviarReporte, true);
+        try {
+          const resultado = await ObjetosApi.reportarPublicacion(
+            objeto.id,
+            motivo.value,
+            detalleReporte.value
+          );
+
+          if (resultado.ok) {
+            mostrarMensaje(reporteMensaje, "El reporte fue enviado correctamente.", "success");
+            enviarReporte.remove();
+            motivo.disabled = true;
+            detalleReporte.disabled = true;
+          } else {
+            mostrarMensaje(reporteMensaje, resultado.mensaje, "error");
+          }
+        } catch (error) {
+          mostrarMensaje(reporteMensaje, error.message, "error");
+        } finally {
+          ocupado(enviarReporte, false);
+        }
+      });
+
+      const zonaReporte = h("div", { class: "report-box" },
+        h("h2", { class: "sub" }, "¿Hay un problema con esta publicación?"),
+        h("p", { class: "report-text" }, "Puedes reportarla si encuentras información falsa o contenido inapropiado."),
+        motivo,
+        detalleReporte,
+        enviarReporte,
+        reporteMensaje
+      );
+
       return pantalla(
         usuario,
 
@@ -252,7 +305,8 @@
               )
             ),
 
-            zonaContacto
+            zonaContacto,
+            zonaReporte
           )
         )
       );
