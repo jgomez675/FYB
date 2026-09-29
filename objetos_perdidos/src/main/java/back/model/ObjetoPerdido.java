@@ -10,10 +10,12 @@ public class ObjetoPerdido {
     private String imagen;
     private String correoUsuario;
     private String caracteristicaPrivada;
+    private String categoria;
+    private String estado;
 
     public ObjetoPerdido(int id, String nombre, String descripcion, String lugar,
                          String fecha, String imagen, String correoUsuario,
-                         String caracteristicaPrivada) {
+                         String caracteristicaPrivada, String categoria, String estado) {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
@@ -22,6 +24,8 @@ public class ObjetoPerdido {
         this.imagen = imagen;
         this.correoUsuario = correoUsuario;
         this.caracteristicaPrivada = caracteristicaPrivada;
+        this.categoria = categoria;
+        this.estado = estado;
     }
 
     public int getId() { return id; }
@@ -32,4 +36,6 @@ public class ObjetoPerdido {
     public String getImagen() { return imagen; }
     public String getCorreoUsuario() { return correoUsuario; }
     public String getCaracteristicaPrivada() { return caracteristicaPrivada; }
+    public String getCategoria() { return categoria; }
+    public String getEstado() { return estado; }
 }
