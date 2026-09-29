@@ -76,6 +76,9 @@ public class ObjetosController {
         String caracteristicaPrivada =
                 texto(cuerpo, "caracteristicaPrivada");
 
+        String categoria = texto(cuerpo, "categoria");
+        String estado = texto(cuerpo, "estado");
+
         Path temporal = null;
 
         try {
@@ -110,7 +113,9 @@ public class ObjetosController {
                             texto(cuerpo, "fecha"),
                             temporal,
                             sesion.correo(),
-                            caracteristicaPrivada
+                            caracteristicaPrivada,
+                            categoria,
+                            estado
                     );
 
             if (!ObjetoPerdidoService.OBJETO_GUARDADO.equals(resultado)) {
@@ -198,6 +203,8 @@ public class ObjetosController {
         resultado.put("fecha", objeto.getFecha());
         resultado.put("imagenUrl", imagenUrl);
         resultado.put("correoUsuario", objeto.getCorreoUsuario());
+        resultado.put("categoria", objeto.getCategoria());
+        resultado.put("estado", objeto.getEstado());
 
         // IMPORTANTE:
         // NO agregamos caracteristicaPrivada aquí.
