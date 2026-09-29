@@ -176,6 +176,29 @@ h1:focus {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+.field select,
+.control {
+  width: 100%;
+  min-height: 45px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--navy-950);
+  background: var(--slate-50);
+  border: 1px solid var(--slate-300);
+  border-radius: 10px;
+}
+.field select:focus,
+.control:focus {
+  outline: none;
+  border-color: var(--blue-600);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+.control {
+  resize: vertical;
+}
+
 .field textarea {
   height: auto;
   min-height: 112px;
@@ -432,6 +455,21 @@ h1:focus {
   height: 44px;
   background: #fff;
 }
+.filter-select {
+  height: 44px;
+  min-width: 170px;
+  padding: 0 12px;
+  font: inherit;
+  color: var(--navy-950);
+  background: #fff;
+  border: 1px solid var(--slate-300);
+  border-radius: 10px;
+}
+.filter-select:focus {
+  outline: none;
+  border-color: var(--blue-600);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
 .status-line {
   margin: 0;
   font-size: 14px;
@@ -487,6 +525,33 @@ h1:focus {
   color: var(--slate-500);
 }
 
+.obj-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+}
+.tag-category {
+  color: var(--navy-900);
+  background: var(--slate-100);
+}
+.tag-lost {
+  color: #7f1d1d;
+  background: #fee2e2;
+}
+.tag-found {
+  color: #14532d;
+  background: #dcfce7;
+}
 .obj-body {
   display: flex;
   flex: 1;
@@ -521,6 +586,26 @@ h1:focus {
   min-height: 40px;
   margin-top: 10px;
   font-size: 13px;
+}
+
+.help-text {
+  display: block;
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--slate-500);
+}
+
+.report-box {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--slate-200);
+}
+.report-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--slate-500);
 }
 
 /* ---------- Detalle ---------- */
@@ -640,6 +725,11 @@ h1:focus {
 }
 
 /* ---------- Aviso sin JavaScript ---------- */
+
+.sin-js {
+  padding: 24px;
+  color: #fff;
+}
 
 .sin-js {
   padding: 24px;
