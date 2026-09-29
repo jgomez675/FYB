@@ -9,11 +9,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * Sesiones en memoria: al iniciar sesión el navegador recibe una cookie con un código
  * aleatorio y aquí queda guardado quién es. Si se reinicia el servidor, todos deben volver a entrar.
  */
-final class SessionManager {
+public final class SessionManager {
 
     static final long DURACION_SEGUNDOS = 7L * 24 * 3600;
 
-    record Sesion(String nombre, String correo, long expira) {
+    public record Sesion(String nombre, String correo, long expira) {
     }
 
     private static final SecureRandom ALEATORIO = new SecureRandom();
@@ -22,7 +22,7 @@ final class SessionManager {
     private SessionManager() {
     }
 
-    static String crear(String nombre, String correo) {
+   public static String crear(String nombre, String correo) {
         long ahora = System.currentTimeMillis();
         if (sesiones.size() > 1000) {
             sesiones.values().removeIf(s -> s.expira() < ahora);
@@ -36,7 +36,7 @@ final class SessionManager {
         return token;
     }
 
-    static Sesion obtener(String token) {
+    public static Sesion obtener(String token) {
         if (token == null) return null;
 
         Sesion sesion = sesiones.get(token);
@@ -49,7 +49,7 @@ final class SessionManager {
         return sesion;
     }
 
-    static void cerrar(String token) {
+    public static void cerrar(String token) {
         if (token != null) sesiones.remove(token);
     }
 }

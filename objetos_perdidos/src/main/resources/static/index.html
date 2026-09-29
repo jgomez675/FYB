@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#172554">
+  <meta name="description" content="">
+  <title data-app-name>FYB</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23172554'/%3E%3Ccircle cx='14' cy='14' r='7' fill='none' stroke='%2360a5fa' stroke-width='3.4'/%3E%3Cpath d='M19.5 19.5 25.5 25.5' stroke='%2360a5fa' stroke-width='3.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+  <div id="app"></div>
+
+  <noscript>
+    <p class="sin-js">
+      <span data-app-name>FYB</span> necesita JavaScript para funcionar. Actívalo en tu navegador e inténtalo de nuevo.
+    </p>
+  </noscript>
+
+  <!-- El orden importa: configuración -> conexión con el servidor -> piezas -> pantallas -> arranque -->
+  <script src="config.js"></script>
+
+  <script src="servicios/ApiClient.js"></script>
+  <script src="servicios/AuthApi.js"></script>
+  <script src="servicios/ObjetosApi.js"></script>
+
+  <script src="components/dom.js"></script>
+  <script src="components/navigation.js"></script>
+  <script src="components/imagen.js"></script>
+  <script src="components/layout.js"></script>
+
+  <script src="login/LoginView.js"></script>
+  <script src="register/RegisterView.js"></script>
+  <script src="objetos/ObjetosView.js"></script>
+  <script src="objetos/DetalleObjetoView.js"></script>
+  <script src="objetos/RegistrarObjetoView.js"></script>
+
+  <script src="Main.js"></script>
+</body>
+</html>
