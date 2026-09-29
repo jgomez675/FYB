@@ -5,6 +5,7 @@ import back.model.ObjetoPerdido;
 import back.model.Usuario;
 import back.service.AuthService;
 import back.service.ObjetoPerdidoService;
+import back.service.RecompensasService;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -107,6 +108,18 @@ public final class ApiServer {
             case "/api/sesion":
                 exigir(metodo, "GET");
                 sesion(ex);
+                return;
+            case "/api/puntos":
+                exigir(metodo, "GET");
+                puntos(ex);
+                return;
+            case "/api/devoluciones/confirmar":
+                exigir(metodo, "POST");
+                confirmarDevolucion(ex);
+                return;
+            case "/api/ruleta/girar":
+                exigir(metodo, "POST");
+                girarRuleta(ex);
                 return;
             case "/api/objetos":
                 if (metodo.equals("GET")) listarObjetos(ex);
@@ -297,6 +310,38 @@ public final class ApiServer {
         if (nombre.endsWith(".gif")) return "image/gif";
         if (nombre.endsWith(".webp")) return "image/webp";
         return "image/jpeg";
+    }
+
+
+    /* ---------------- Puntos y ruleta ---------------- */
+    private static void puntos(HttpExchange ex) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        Http.json(ex, 200, mapa("saldo", RecompensasService.saldo(sesion.correo()), "recompensas", RecompensasService.resumen(sesion.correo())));
+    }
+
+    private static int idObjeto(Map<String,Object> cuerpo) {
+        Object valor = cuerpo.get("objetoId");
+        if (!(valor instanceof Number)) throw new ApiException(400, "Indica un objeto válido.");
+        return ((Number) valor).intValue();
+    }
+
+    private static void confirmarDevolucion(HttpExchange ex) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        int id = idObjeto(Http.leerJson(ex));
+        ObjetoPerdido objeto = ObjetoPerdidoService.obtenerObjeto(id);
+        if (objeto == null) throw new ApiException(404, "No encontramos este objeto.");
+        try {
+            int puntos = RecompensasService.confirmar(sesion.correo(), id, RecompensasService.puntosCategoria(objeto.getNombre()));
+            if (puntos < 0) throw new ApiException(409, "Ya recibiste puntos por este objeto.");
+            Http.json(ex, 200, mapa("ok", true, "puntosGanados", puntos, "saldo", RecompensasService.saldo(sesion.correo())));
+        } catch (IOException e) { throw e; }
+    }
+
+    private static void girarRuleta(HttpExchange ex) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        int id = idObjeto(Http.leerJson(ex));
+        try { Http.json(ex, 200, RecompensasService.girar(sesion.correo(), id)); }
+        catch (IllegalStateException e) { throw new ApiException(409, e.getMessage()); }
     }
 
     /* ---------------- Formato de las respuestas ---------------- */
