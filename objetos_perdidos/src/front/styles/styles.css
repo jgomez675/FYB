@@ -645,3 +645,21 @@ h1:focus {
   padding: 24px;
   color: #fff;
 }
+.wheel-disc.is-spinning {
+  animation: fyb-wheel-spin 2.4s cubic-bezier(.12, .72, .16, 1) both;
+}
+
+@keyframes fyb-wheel-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(1800deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel-disc.is-spinning {
+    animation: none;
+  }
+}
