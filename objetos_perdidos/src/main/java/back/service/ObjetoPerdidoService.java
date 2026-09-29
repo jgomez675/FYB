@@ -18,6 +18,10 @@ public class ObjetoPerdidoService {
     private static final Path ARCHIVO_OBJETOS = Paths.get("data", "objetos.txt");
     private static final Path CARPETA_IMAGENES = Paths.get("data", "objetos");
 
+    private static final String CATEGORIA_OTROS = "Otros";
+    private static final String ESTADO_PERDIDO = "Perdido";
+    private static final String ESTADO_ENCONTRADO = "Encontrado";
+
     static {
         cargarObjetos();
     }
@@ -37,45 +41,34 @@ public class ObjetoPerdidoService {
 
                 String[] partes = linea.split("\\|", -1);
 
-                // Objetos antiguos: no tenían característica privada
-                if (partes.length == 7) {
-                    try {
+                try {
+                    if (partes.length == 7) {
                         objetos.add(new ObjetoPerdido(
                                 Integer.parseInt(partes[0]),
-                                partes[1],
-                                partes[2],
-                                partes[3],
-                                partes[4],
-                                partes[5],
-                                partes[6],
-                                ""
+                                partes[1], partes[2], partes[3], partes[4], partes[5],
+                                partes[6], "", CATEGORIA_OTROS, ESTADO_PERDIDO
                         ));
-                    } catch (NumberFormatException ignored) {
-                    }
-                }
-
-                // Objetos nuevos: tienen característica privada
-                if (partes.length == 8) {
-                    try {
+                    } else if (partes.length == 8) {
                         objetos.add(new ObjetoPerdido(
                                 Integer.parseInt(partes[0]),
-                                partes[1],
-                                partes[2],
-                                partes[3],
-                                partes[4],
-                                partes[5],
-                                partes[6],
-                                partes[7]
+                                partes[1], partes[2], partes[3], partes[4], partes[5],
+                                partes[6], partes[7], CATEGORIA_OTROS, ESTADO_PERDIDO
                         ));
-                    } catch (NumberFormatException ignored) {
+                    } else if (partes.length >= 10) {
+                        objetos.add(new ObjetoPerdido(
+                                Integer.parseInt(partes[0]),
+                                partes[1], partes[2], partes[3], partes[4], partes[5],
+                                partes[6], partes[7],
+                                partes[8].isBlank() ? CATEGORIA_OTROS : partes[8],
+                                partes[9].isBlank() ? ESTADO_PERDIDO : partes[9]
+                        ));
                     }
+                } catch (NumberFormatException ignored) {
                 }
             }
 
         } catch (IOException e) {
-            System.err.println(
-                    "No se pudieron cargar los objetos: " + e.getMessage()
-            );
+            System.err.println("No se pudieron cargar los objetos: " + e.getMessage());
         }
     }
 
@@ -89,7 +82,6 @@ public class ObjetoPerdidoService {
                 return objeto;
             }
         }
-
         return null;
     }
 
@@ -106,50 +98,40 @@ public class ObjetoPerdidoService {
             String fecha,
             Path imagenOriginal,
             String correoUsuario,
-            String caracteristicaPrivada) {
+            String caracteristicaPrivada,
+            String categoria,
+            String estado) {
 
         if (nombre == null || nombre.isBlank()) {
             return "El nombre del objeto es obligatorio.";
         }
-
         if (descripcion == null || descripcion.isBlank()) {
             return "La descripción es obligatoria.";
         }
-
         if (lugar == null || lugar.isBlank()) {
             return "El lugar es obligatorio.";
         }
-
         if (fecha == null || fecha.isBlank()) {
             return "La fecha es obligatoria.";
         }
-
         if (imagenOriginal == null) {
             return "Debes seleccionar una imagen.";
         }
-
         if (caracteristicaPrivada == null || caracteristicaPrivada.isBlank()) {
             return "La característica privada es obligatoria.";
         }
+
+        categoria = validarCategoria(categoria);
+        estado = validarEstado(estado);
 
         try {
             Files.createDirectories(CARPETA_IMAGENES);
 
             int id = obtenerSiguienteId();
+            String extension = obtenerExtension(imagenOriginal.getFileName().toString());
+            Path destino = CARPETA_IMAGENES.resolve("objeto_" + id + extension);
 
-            String extension = obtenerExtension(
-                    imagenOriginal.getFileName().toString()
-            );
-
-            Path destino = CARPETA_IMAGENES.resolve(
-                    "objeto_" + id + extension
-            );
-
-            Files.copy(
-                    imagenOriginal,
-                    destino,
-                    StandardCopyOption.REPLACE_EXISTING
-            );
+            Files.copy(imagenOriginal, destino, StandardCopyOption.REPLACE_EXISTING);
 
             ObjetoPerdido objeto = new ObjetoPerdido(
                     id,
@@ -159,13 +141,13 @@ public class ObjetoPerdidoService {
                     limpiar(fecha),
                     destino.toString(),
                     limpiar(correoUsuario),
-                    limpiar(caracteristicaPrivada)
+                    limpiar(caracteristicaPrivada),
+                    limpiar(categoria),
+                    limpiar(estado)
             );
 
             objetos.add(objeto);
-
             guardarObjetos();
-
             return OBJETO_GUARDADO;
 
         } catch (IOException e) {
@@ -174,18 +156,13 @@ public class ObjetoPerdidoService {
     }
 
     private static void guardarObjetos() throws IOException {
-
         Path carpeta = ARCHIVO_OBJETOS.getParent();
-
         if (carpeta != null) {
             Files.createDirectories(carpeta);
         }
 
-        try (BufferedWriter escritor =
-                     Files.newBufferedWriter(ARCHIVO_OBJETOS)) {
-
+        try (BufferedWriter escritor = Files.newBufferedWriter(ARCHIVO_OBJETOS)) {
             for (ObjetoPerdido objeto : objetos) {
-
                 escritor.write(
                         objeto.getId() + "|" +
                         objeto.getNombre() + "|" +
@@ -194,44 +171,54 @@ public class ObjetoPerdidoService {
                         objeto.getFecha() + "|" +
                         objeto.getImagen() + "|" +
                         objeto.getCorreoUsuario() + "|" +
-                        objeto.getCaracteristicaPrivada()
+                        objeto.getCaracteristicaPrivada() + "|" +
+                        objeto.getCategoria() + "|" +
+                        objeto.getEstado()
                 );
-
                 escritor.newLine();
             }
         }
     }
 
     private static int obtenerSiguienteId() {
-
         int mayor = 0;
-
         for (ObjetoPerdido objeto : objetos) {
             if (objeto.getId() > mayor) {
                 mayor = objeto.getId();
             }
         }
-
         return mayor + 1;
     }
 
     private static String limpiar(String texto) {
-
-        return texto
-                .trim()
+        return texto == null ? "" : texto.trim()
                 .replace("|", "/")
                 .replace("\n", " ")
                 .replace("\r", " ");
     }
 
     private static String obtenerExtension(String nombre) {
-
         int punto = nombre.lastIndexOf('.');
-
         if (punto >= 0) {
             return nombre.substring(punto).toLowerCase();
         }
-
         return ".jpg";
+    }
+
+    private static String validarCategoria(String categoria) {
+        if (categoria == null || categoria.isBlank()) {
+            return CATEGORIA_OTROS;
+        }
+        return switch (categoria.trim()) {
+            case "Tecnología", "Documentos", "Accesorios", "Ropa", "Llaves", "Otros" -> categoria.trim();
+            default -> CATEGORIA_OTROS;
+        };
+    }
+
+    private static String validarEstado(String estado) {
+        if (ESTADO_ENCONTRADO.equalsIgnoreCase(estado)) {
+            return ESTADO_ENCONTRADO;
+        }
+        return ESTADO_PERDIDO;
     }
 }
