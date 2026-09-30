@@ -19,7 +19,8 @@ public class VerificacionObjetoController {
             @RequestBody Map<String, Object> cuerpo,
             HttpServletRequest request) {
 
-        requerirSesion(request);
+        SessionManager.Sesion sesion =
+                requerirSesion(request);
 
         ObjetoPerdido objeto =
                 ObjetoPerdidoService.obtenerObjeto(id);
@@ -52,11 +53,62 @@ public class VerificacionObjetoController {
             );
         }
 
+        String correoEstudiante =
+                sesion.correo();
+
+        /*
+         * El estudiante que publicó el objeto
+         * no puede ser su propio descubridor.
+         */
+        if (objeto.getCorreoUsuario()
+                .equalsIgnoreCase(correoEstudiante)) {
+
+            return Map.of(
+                    "ok", false,
+                    "verificado", false,
+                    "esPropietario", true,
+                    "mensaje",
+                    "No puedes verificar tu propio objeto."
+            );
+        }
+
+        /*
+         * Registramos al estudiante que encontró
+         * el objeto.
+         */
+        boolean descubridorRegistrado =
+                ObjetoPerdidoService.registrarDescubridor(
+                        id,
+                        correoEstudiante
+                );
+
+        if (!descubridorRegistrado) {
+
+            if (objeto.getCorreoDescubridor() != null &&
+                    !objeto.getCorreoDescubridor().isBlank()) {
+
+                return Map.of(
+                        "ok", false,
+                        "verificado", false,
+                        "mensaje",
+                        "Este objeto ya tiene un estudiante registrado como descubridor."
+                );
+            }
+
+            return Map.of(
+                    "ok", false,
+                    "verificado", false,
+                    "mensaje",
+                    "No se pudo registrar al estudiante como descubridor."
+            );
+        }
+
         return Map.of(
                 "ok", true,
                 "verificado", true,
+                "descubridorRegistrado", true,
                 "mensaje",
-                "La característica coincide. El objeto puede ser verificado."
+                "La característica coincide. Quedaste registrado como descubridor del objeto."
         );
     }
 
@@ -91,6 +143,7 @@ public class VerificacionObjetoController {
         }
 
         for (Cookie cookie : cookies) {
+
             if (nombre.equals(cookie.getName())) {
                 return cookie.getValue();
             }

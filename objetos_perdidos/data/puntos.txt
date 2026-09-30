@@ -1,0 +1,5 @@
+julian.prueba@usa.edu.co|200|Devolucion del objeto Labtob prueba|2026-09-29
+pedro.prueba@usa.edu.co|5|Registro del objeto Ejercicio|2026-09-29
+julian.prueba@usa.edu.co|200|Devolucion del objeto Ejercicio|2026-09-29
+julian.prueba@usa.edu.co|5|Registro del objeto ppp|2026-09-29
+pedro.prueba@usa.edu.co|200|Devolucion del objeto ppp|2026-09-29
