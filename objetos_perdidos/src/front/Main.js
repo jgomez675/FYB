@@ -12,7 +12,7 @@
   const { ApiClient, AuthApi, ErrorApi } = App.front.api;
   const { LoginView } = App.front.login;
   const { RegisterView } = App.front.register;
-  const { ObjetosView, DetalleObjetoView, RegistrarObjetoView } = App.front.objetos;
+  const { ObjetosView, DetalleObjetoView, RegistrarObjetoView, CategoriasAdminView } = App.front.objetos;
 
   const rutas = [
     { patron: /^#\/login$/, requiereSesion: false, vista: LoginView },
@@ -20,6 +20,8 @@
     { patron: /^#\/objetos$/, requiereSesion: true, vista: ObjetosView },
     { patron: /^#\/objetos\/(\d+)$/, requiereSesion: true, vista: DetalleObjetoView },
     { patron: /^#\/publicar$/, requiereSesion: true, vista: RegistrarObjetoView },
+    { patron: /^#\/editar\/(\d+)$/, requiereSesion: true, vista: RegistrarObjetoView },
+    { patron: /^#\/admin\/categorias$/, requiereSesion: true, vista: CategoriasAdminView },
   ];
 
   const raiz = document.getElementById("app");
