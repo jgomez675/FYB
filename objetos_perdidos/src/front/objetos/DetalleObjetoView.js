@@ -2,11 +2,11 @@
 (function (App) {
   "use strict";
 
-  const { h, formatearFecha } = App.front.components.dom;
+  const { h, formatearFecha, ocupado, crearAvisos } = App.front.components.dom;
   const { pantalla, imagenObjeto } = App.front.components.layout;
-  const { ponerTitulo } = App.front.components.navigation;
+  const { guardarAviso, irA, ponerTitulo } = App.front.components.navigation;
+  const { botonFavorito } = App.front.components.favorito;
   const { ObjetosApi } = App.front.api;
-  const { ApiClient } = App.front.api;
 
   class DetalleObjetoView {
     async mostrar({ usuario, params }) {
@@ -22,19 +22,19 @@
 
       ponerTitulo(objeto.nombre);
       const asunto = encodeURIComponent(App.config.name + ": " + objeto.nombre);
-      const acciones = [];
-      if (objeto.correoUsuario === usuario.correo || usuario.rol === "admin") acciones.push(h("a", { class: "btn btn-secondary", href: "#/editar/" + objeto.id }, "Editar publicación"));
-      const puntosMensaje = h("p", { class: "msg", role: "status" });
-      const ganarPuntos = h("button", { class: "btn btn-primary", type: "button" }, "Confirmar devolución y ganar puntos");
-      ganarPuntos.addEventListener("click", async () => {
-        ganarPuntos.disabled = true;
-        try {
-          const r = await ApiClient.solicitar("POST", "/api/devoluciones/confirmar", { objetoId: objeto.id });
-          if (r.estado === 200) puntosMensaje.textContent = "¡Ganaste " + r.datos.puntosGanados + " puntos! Tu saldo es de " + r.datos.saldo + " puntos.";
-          else puntosMensaje.textContent = (r.datos && r.datos.mensaje) || "No se pudieron asignar los puntos.";
-        } catch (e) { puntosMensaje.textContent = e.message; }
-        finally { ganarPuntos.disabled = false; }
-      });
+      const avisos = crearAvisos();
+
+      const datos = [
+        h("div", {}, h("dt", {}, "Lugar"), h("dd", {}, objeto.lugar)),
+        h("div", {}, h("dt", {}, "Fecha"), h("dd", {}, formatearFecha(objeto.fecha))),
+      ];
+      if (objeto.publicadoPor) {
+        datos.push(h("div", {}, h("dt", {}, "Publicado por"), h("dd", {}, objeto.publicadoPor)));
+      }
+      if (objeto.telefonoContacto) {
+        const numero = objeto.telefonoContacto.replace(/[^\d+]/g, "");
+        datos.push(h("div", {}, h("dt", {}, "Teléfono de contacto"), h("dd", {}, h("a", { href: "tel:" + numero }, objeto.telefonoContacto))));
+      }
 
       return pantalla(
         usuario,
@@ -47,20 +47,73 @@
             "div",
             { class: "detail-body" },
             h("h1", {}, objeto.nombre),
+            objeto.propio ? h("span", { class: "badge" }, "Tu publicación") : null,
             h("div", {}, h("h2", { class: "sub" }, "Descripción"), h("p", { class: "prewrap" }, objeto.descripcion)),
+            h("dl", { class: "facts" }, ...datos),
             h(
-              "dl",
-              { class: "facts" },
-              h("div", {}, h("dt", {}, "Lugar"), h("dd", {}, objeto.lugar)),
-              h("div", {}, h("dt", {}, "Fecha"), h("dd", {}, formatearFecha(objeto.fecha)))
+              "div",
+              { class: "detail-actions" },
+              botonFavorito(objeto, { variante: "texto", alError: (mensaje) => avisos.avisar(mensaje, "error") }),
+              !objeto.propio && objeto.correoUsuario ? h("a", { class: "btn btn-primary", href: "mailto:" + objeto.correoUsuario + "?subject=" + asunto }, "Contactar a quien lo publicó") : null
             ),
-            h("p", { class: "obj-meta" }, h("span", { class: "k" }, "Categoría: "), objeto.categoria || "Otros"),
-            objeto.correoUsuario ? h("a", { class: "btn btn-primary", href: "mailto:" + objeto.correoUsuario + "?subject=" + asunto }, "Contactar a quien lo publicó") : null,
-            ...acciones,
-            objeto.correoUsuario !== usuario.correo ? h("div", { class: "points-box" }, h("p", {}, "Si ayudaste a devolver este objeto, puedes confirmar la devolución y recibir automáticamente entre 5 y 25 puntos."), ganarPuntos, puntosMensaje) : null
+            objeto.propio ? this.zonaRetiro(objeto, avisos) : null,
+            avisos.nodo
           )
         )
       );
+    }
+
+    // Solo la ve quien publicó el objeto. Pide confirmar antes de retirarlo, porque no se puede deshacer.
+    zonaRetiro(objeto, avisos) {
+      const zona = h("div", { class: "retirar" });
+
+      const mostrarBoton = () => {
+        const boton = h("button", { class: "btn btn-danger", type: "button" }, "Retirar publicación");
+        boton.addEventListener("click", pedirConfirmacion);
+        zona.replaceChildren(boton);
+        return boton;
+      };
+
+      const retirar = async (confirmar) => {
+        ocupado(confirmar, true);
+        try {
+          const resultado = await ObjetosApi.retirarObjeto(objeto.id);
+          if (resultado === ObjetosApi.OBJETO_ELIMINADO) {
+            guardarAviso("Publicación retirada correctamente.");
+            irA("#/objetos");
+            return;
+          }
+          avisos.avisar(resultado, "error");
+          mostrarBoton().focus();
+        } catch (error) {
+          if (error.estado === 401) {
+            guardarAviso(error.message, "error");
+            irA("#/login");
+            return;
+          }
+          avisos.avisar(error.message, "error");
+          mostrarBoton().focus();
+        } finally {
+          ocupado(confirmar, false);
+        }
+      };
+
+      const pedirConfirmacion = () => {
+        avisos.avisar();
+        const confirmar = h("button", { class: "btn btn-danger", type: "button" }, "Sí, retirar");
+        const cancelar = h("button", { class: "btn btn-secondary", type: "button", "aria-describedby": "retirar-texto" }, "Cancelar");
+        confirmar.addEventListener("click", () => retirar(confirmar));
+        cancelar.addEventListener("click", () => mostrarBoton().focus());
+
+        zona.replaceChildren(
+          h("p", { class: "confirm-text", id: "retirar-texto" }, "¿Retirar esta publicación? Dejará de verse en la aplicación y en los favoritos de quienes la guardaron. No se puede deshacer."),
+          h("div", { class: "actions" }, confirmar, cancelar)
+        );
+        cancelar.focus(); // el foco empieza en la opción segura
+      };
+
+      mostrarBoton();
+      return zona;
     }
   }
 

@@ -40,6 +40,29 @@
     return svg;
   }
 
+  // Corazón de favoritos: vacío por defecto, relleno cuando el botón tiene la clase is-active.
+  function iconoCorazon() {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("class", "heart-icon");
+    svg.setAttribute("aria-hidden", "true");
+    const forma = document.createElementNS(SVG_NS, "path");
+    forma.setAttribute("d", "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z");
+    svg.append(forma);
+    return svg;
+  }
+
+  // Zona para avisos que aparecen en la pantalla (por ejemplo, "No se pudo guardar el favorito").
+  // Devuelve { nodo, avisar(texto, tipo) }; avisar() sin texto la vacía.
+  function crearAvisos() {
+    const nodo = h("div", { class: "avisos", "aria-live": "polite" });
+    const avisar = (texto, tipo) => {
+      nodo.replaceChildren();
+      if (texto) nodo.append(h("p", { class: "flash " + (tipo || "ok"), role: "status" }, texto));
+    };
+    return { nodo, avisar };
+  }
+
   // Campo de formulario con su etiqueta visible. Devuelve { control, wrap }.
   function campo({ id, etiqueta, tag = "input", ...attrs }) {
     const props = { id, name: id, ...attrs };
@@ -76,5 +99,5 @@
     });
   }
 
-  App.front.components.dom = { h, iconoMarca, campo, mostrarMensaje, ocupado, normalizar, hoyISO, formatearFecha };
+  App.front.components.dom = { h, iconoMarca, iconoCorazon, crearAvisos, campo, mostrarMensaje, ocupado, normalizar, hoyISO, formatearFecha };
 })(window.App);

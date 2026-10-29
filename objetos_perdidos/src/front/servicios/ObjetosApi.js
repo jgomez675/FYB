@@ -20,7 +20,7 @@
     }
 
     // Devuelve OBJETO_GUARDADO o el mensaje de error. La foto se reduce aquí antes de subirla.
-    static async guardarObjeto(nombre, descripcion, lugar, fecha, archivoImagen, categoria = "Otros") {
+    static async guardarObjeto(nombre, descripcion, lugar, fecha, archivoImagen) {
       let imagen = "";
       if (archivoImagen) {
         try {
@@ -30,44 +30,23 @@
         }
       }
 
-      const r = await ApiClient.solicitar("POST", "/api/objetos", { nombre, descripcion, lugar, fecha, imagen, categoria });
+      const r = await ApiClient.solicitar("POST", "/api/objetos", { nombre, descripcion, lugar, fecha, imagen });
       if (r.estado === 201 && r.datos && r.datos.ok) return ObjetosApi.OBJETO_GUARDADO;
       if (r.estado === 401) throw new ErrorApi(ApiClient.mensajeDe(r), 401);
       return ApiClient.mensajeDe(r);
     }
 
-    static async editarObjeto(id, nombre, descripcion, lugar, fecha, categoria) {
-      const r = await ApiClient.solicitar("PUT", "/api/objetos/" + encodeURIComponent(id) + "/editar", { nombre, descripcion, lugar, fecha, categoria });
-      if (r.estado === 200 && r.datos && r.datos.ok) return true;
-      throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
-    }
-
-    static async obtenerCategorias() {
-      const r = await ApiClient.solicitar("GET", "/api/categorias");
-      if (r.estado === 200 && r.datos) return r.datos.categorias;
-      throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
-    }
-
-    static async crearCategoria(nombre) {
-      const r = await ApiClient.solicitar("POST", "/api/categorias", { nombre });
-      if (r.estado === 201 && r.datos) return r.datos.categorias;
-      throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
-    }
-
-    static async editarCategoria(anterior, nombre) {
-      const r = await ApiClient.solicitar("PUT", "/api/categorias/" + encodeURIComponent(anterior) + "/editar", { nombre });
-      if (r.estado === 200 && r.datos) return r.datos.categorias;
-      throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
-    }
-
-    static async eliminarCategoria(nombre) {
-      const r = await ApiClient.solicitar("DELETE", "/api/categorias/" + encodeURIComponent(nombre));
-      if (r.estado === 200 && r.datos) return r.datos.categorias;
-      throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
+    // Retira una publicación propia. Devuelve OBJETO_ELIMINADO o el mensaje de error.
+    static async retirarObjeto(id) {
+      const r = await ApiClient.solicitar("DELETE", "/api/objetos/" + encodeURIComponent(id));
+      if (r.estado === 200 && r.datos && r.datos.ok) return ObjetosApi.OBJETO_ELIMINADO;
+      if (r.estado === 401) throw new ErrorApi(ApiClient.mensajeDe(r), 401);
+      return ApiClient.mensajeDe(r);
     }
   }
 
   ObjetosApi.OBJETO_GUARDADO = "OBJETO_GUARDADO";
+  ObjetosApi.OBJETO_ELIMINADO = "OBJETO_ELIMINADO";
 
   App.front.api.ObjetosApi = ObjetosApi;
 })(window.App);

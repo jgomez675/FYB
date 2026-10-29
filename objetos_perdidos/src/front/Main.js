@@ -1,7 +1,7 @@
 /*
  * Arranque del front. Pide al servidor el nombre de la app, decide qué pantalla mostrar según
- * el hash de la URL (#/login, #/registro, #/objetos, #/objetos/3, #/publicar) y protege las
- * pantallas que requieren sesión.
+ * el hash de la URL (#/login, #/registro, #/objetos, #/objetos/3, #/publicar, #/favoritos,
+ * #/perfil) y protege las pantallas que requieren sesión.
  */
 (function (App) {
   "use strict";
@@ -12,7 +12,9 @@
   const { ApiClient, AuthApi, ErrorApi } = App.front.api;
   const { LoginView } = App.front.login;
   const { RegisterView } = App.front.register;
-  const { ObjetosView, DetalleObjetoView, RegistrarObjetoView, CategoriasAdminView } = App.front.objetos;
+  const { ObjetosView, DetalleObjetoView, RegistrarObjetoView } = App.front.objetos;
+  const { FavoritosView } = App.front.favoritos;
+  const { PerfilView } = App.front.perfil;
 
   const rutas = [
     { patron: /^#\/login$/, requiereSesion: false, vista: LoginView },
@@ -20,8 +22,8 @@
     { patron: /^#\/objetos$/, requiereSesion: true, vista: ObjetosView },
     { patron: /^#\/objetos\/(\d+)$/, requiereSesion: true, vista: DetalleObjetoView },
     { patron: /^#\/publicar$/, requiereSesion: true, vista: RegistrarObjetoView },
-    { patron: /^#\/editar\/(\d+)$/, requiereSesion: true, vista: RegistrarObjetoView },
-    { patron: /^#\/admin\/categorias$/, requiereSesion: true, vista: CategoriasAdminView },
+    { patron: /^#\/favoritos$/, requiereSesion: true, vista: FavoritosView },
+    { patron: /^#\/perfil$/, requiereSesion: true, vista: PerfilView },
   ];
 
   const raiz = document.getElementById("app");
