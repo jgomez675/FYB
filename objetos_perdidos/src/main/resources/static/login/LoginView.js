@@ -48,6 +48,7 @@
         h("p", { class: "tagline" }, App.config.tagline),
         tomarAviso(),
         formulario,
+        h("p", { class: "alt" }, h("a", { href: "#/recuperar" }, "¿Olvidaste tu contraseña?")),
         h("p", { class: "alt" }, "¿No tienes una cuenta? ", h("a", { href: "#/registro" }, "Regístrate"))
       );
     }

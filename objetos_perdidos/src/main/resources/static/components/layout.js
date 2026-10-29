@@ -80,6 +80,15 @@
             "a",
             {
               class: "btn btn-ghost",
+              href: "#/mis-publicaciones"
+            },
+            "Mis publicaciones"
+          ),
+
+          h(
+            "a",
+            {
+              class: "btn btn-ghost",
               href: "#/puntos"
             },
             "Mis puntos"

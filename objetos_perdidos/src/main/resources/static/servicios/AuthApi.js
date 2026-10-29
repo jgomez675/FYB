@@ -20,6 +20,20 @@
       throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
     }
 
+    // Pide el código de recuperación. Devuelve { ok, mensaje }.
+    static async solicitarCodigo(correo) {
+      const r = await ApiClient.solicitar("POST", "/api/recuperar/solicitar", { correo });
+      if (r.estado === 200 && r.datos && r.datos.ok) return { ok: true, mensaje: r.datos.mensaje };
+      return { ok: false, mensaje: ApiClient.mensajeDe(r) };
+    }
+
+    // Cambia la contraseña con el código recibido. Devuelve { ok, mensaje }.
+    static async restablecerContrasena(correo, codigo, contrasena, confirmar) {
+      const r = await ApiClient.solicitar("POST", "/api/recuperar/restablecer", { correo, codigo, contrasena, confirmar });
+      if (r.estado === 200 && r.datos && r.datos.ok) return { ok: true };
+      return { ok: false, mensaje: ApiClient.mensajeDe(r) };
+    }
+
     static async usuarioActual() {
       const r = await ApiClient.solicitar("GET", "/api/sesion");
       if (r.estado === 200 && r.datos) return r.datos.usuario || null;

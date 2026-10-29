@@ -10,6 +10,13 @@
       throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
     }
 
+    // Publicaciones hechas por el usuario con sesión iniciada.
+    static async obtenerMisPublicaciones() {
+      const r = await ApiClient.solicitar("GET", "/api/objetos/mis-publicaciones");
+      if (r.estado === 200 && r.datos) return r.datos.objetos;
+      throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
+    }
+
     static async obtenerObjeto(id) {
       const r = await ApiClient.solicitar("GET", "/api/objetos/" + encodeURIComponent(id));
       if (r.estado === 200 && r.datos) return r.datos.objeto;

@@ -1,6 +1,6 @@
 /*
  * Arranque del front. Pide al servidor el nombre de la app, decide qué pantalla mostrar según
- * el hash de la URL (#/login, #/registro, #/objetos, #/objetos/3, #/publicar, #/puntos) y protege las
+ * el hash de la URL (#/login, #/registro, #/recuperar, #/objetos, #/objetos/3, #/publicar, #/mis-publicaciones, #/puntos) y protege las
  * pantallas que requieren sesión.
  */
 (function (App) {
@@ -17,13 +17,14 @@
 
   const { ApiClient, AuthApi, ErrorApi } = App.front.api;
 
-  const { LoginView } = App.front.login;
+  const { LoginView, RecuperarContrasenaView } = App.front.login;
   const { RegisterView } = App.front.register;
 
   const {
     ObjetosView,
     DetalleObjetoView,
-    RegistrarObjetoView
+    RegistrarObjetoView,
+    MisPublicacionesView
   } = App.front.objetos;
 
   const { PuntosView } = App.front.puntos;
@@ -33,6 +34,11 @@
       patron: /^#\/login$/,
       requiereSesion: false,
       vista: LoginView
+    },
+    {
+      patron: /^#\/recuperar$/,
+      requiereSesion: false,
+      vista: RecuperarContrasenaView
     },
     {
       patron: /^#\/registro$/,
@@ -53,6 +59,11 @@
       patron: /^#\/publicar$/,
       requiereSesion: true,
       vista: RegistrarObjetoView
+    },
+    {
+      patron: /^#\/mis-publicaciones$/,
+      requiereSesion: true,
+      vista: MisPublicacionesView
     },
     {
       patron: /^#\/puntos$/,

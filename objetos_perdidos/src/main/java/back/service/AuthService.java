@@ -97,16 +97,9 @@ public class AuthService {
             return "Debes utilizar un correo @" + AppConfig.DOMINIO_CORREO + ".";
         }
 
-        if (contraseña == null || contraseña.length() < 6) {
-            return "La contraseña debe tener mínimo 6 caracteres.";
-        }
-
-        if (contraseña.length() > MAX_CONTRASEÑA) {
-            return "La contraseña es demasiado larga.";
-        }
-
-        if (!contraseña.equals(confirmarContraseña)) {
-            return "Las contraseñas no coinciden.";
+        String errorContraseña = errorDeContraseña(contraseña, confirmarContraseña);
+        if (errorContraseña != null) {
+            return errorContraseña;
         }
 
         if (buscarPorCorreo(correo) != null) {
@@ -169,6 +162,59 @@ public class AuthService {
 
         migrarAHash(usuario, contraseña);
         return usuario;
+    }
+
+    /** Reglas de una contraseña nueva (registro y recuperación). Devuelve el error o null si es válida. */
+    public static String errorDeContraseña(String contraseña, String confirmarContraseña) {
+        if (contraseña == null || contraseña.length() < 6) {
+            return "La contraseña debe tener mínimo 6 caracteres.";
+        }
+
+        if (contraseña.length() > MAX_CONTRASEÑA) {
+            return "La contraseña es demasiado larga.";
+        }
+
+        if (!contraseña.equals(confirmarContraseña)) {
+            return "Las contraseñas no coinciden.";
+        }
+
+        return null;
+    }
+
+    /** Usuario con ese correo, o null si no existe. */
+    public static Usuario buscarUsuario(String correo) {
+        if (correo == null) {
+            return null;
+        }
+        return buscarPorCorreo(correo.trim());
+    }
+
+    /** Reemplaza la contraseña de la cuenta (queda guardada con hash). Devuelve false si no se pudo. */
+    public static boolean cambiarContraseña(String correo, String contraseñaNueva) {
+        String guardada = generarHash(contraseñaNueva);
+
+        synchronized (usuarios) {
+            for (int i = 0; i < usuarios.size(); i++) {
+                Usuario actual = usuarios.get(i);
+
+                if (!actual.getCorreo().equalsIgnoreCase(correo)) {
+                    continue;
+                }
+
+                usuarios.set(i, new Usuario(actual.getNombre(), actual.getCorreo(), guardada));
+
+                try {
+                    guardarUsuarios();
+                    return true;
+                } catch (IOException e) {
+                    usuarios.set(i, actual);
+                    System.err.println("No se pudo guardar la contraseña nueva: " + e.getMessage());
+                    return false;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static Usuario buscarPorCorreo(String correo) {
