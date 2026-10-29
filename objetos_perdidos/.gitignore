@@ -1,9 +1,0 @@
-# Compilados
-out/
-target/
-
-# Datos de los usuarios (no subir al repositorio)
-data/usuarios.txt
-data/objetos.txt
-data/objetos/*
-!data/objetos/prueba.txt
