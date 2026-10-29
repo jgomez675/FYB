@@ -43,6 +43,49 @@ public class ObjetosController {
         return Map.of("objetos", lista);
     }
 
+    /**
+     * HU: Como estudiante de la Sergio, quiero consultar todas las
+     * publicaciones que he realizado para llevar un control de los
+     * objetos que he reportado.
+     *
+     * Devuelve solo los objetos cuyo autor es el usuario de la sesión
+     * (el correo sale de la sesión, nunca del cliente).
+     */
+    @GetMapping("/mis-publicaciones")
+    public Map<String, Object> misPublicaciones(
+            HttpServletRequest request) {
+
+        SessionManager.Sesion sesion =
+                requerirSesion(request);
+
+        List<ObjetoPerdido> propios = new ArrayList<>();
+
+        for (ObjetoPerdido objeto :
+                ObjetoPerdidoService.obtenerObjetos()) {
+
+            if (objeto.getCorreoUsuario() != null
+                    && objeto.getCorreoUsuario()
+                    .equalsIgnoreCase(sesion.correo())) {
+                propios.add(objeto);
+            }
+        }
+
+        propios.sort(
+                Comparator.comparingInt(ObjetoPerdido::getId).reversed()
+        );
+
+        List<Object> lista = new ArrayList<>();
+
+        for (ObjetoPerdido objeto : propios) {
+            lista.add(objetoJson(objeto));
+        }
+
+        return Map.of(
+                "objetos", lista,
+                "total", lista.size()
+        );
+    }
+
     @GetMapping("/{id}")
     public Map<String, Object> detalleObjeto(
             @PathVariable int id,

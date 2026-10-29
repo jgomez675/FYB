@@ -52,4 +52,10 @@ public final class SessionManager {
     public static void cerrar(String token) {
         if (token != null) sesiones.remove(token);
     }
+
+    /** Cierra todas las sesiones de una cuenta (por ejemplo, al cambiar su contraseña). */
+    public static void cerrarTodas(String correo) {
+        if (correo == null) return;
+        sesiones.values().removeIf(s -> s.correo().equalsIgnoreCase(correo));
+    }
 }

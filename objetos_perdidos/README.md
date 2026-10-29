@@ -52,9 +52,12 @@ data/                                 usuarios.txt, objetos.txt y fotos (se crea
 | `GET /api/config` | Nombre, eslogan y dominio | no |
 | `POST /api/registro` | Crea una cuenta | no |
 | `POST /api/login` | Inicia sesión (cookie) | no |
+| `POST /api/recuperar/solicitar` | Envía un código de 6 dígitos al correo | no |
+| `POST /api/recuperar/restablecer` | Cambia la contraseña con ese código | no |
 | `POST /api/logout` | Cierra sesión | no |
 | `GET /api/sesion` | Usuario actual o `null` | no |
 | `GET /api/objetos` | Lista de objetos | sí |
+| `GET /api/objetos/mis-publicaciones` | Publicaciones del usuario en sesión | sí |
 | `GET /api/objetos/{id}` | Detalle de un objeto | sí |
 | `POST /api/objetos` | Publica un objeto (foto en base64) | sí |
 | `GET /api/imagenes/{archivo}` | Foto de un objeto | sí |
@@ -65,6 +68,27 @@ data/                                 usuarios.txt, objetos.txt y fotos (se crea
 - **Contraseñas:** ahora se guardan con hash (PBKDF2). Las cuentas antiguas en texto plano siguen funcionando y se convierten solas la primera vez que inician sesión.
 - **Servidor:** las validaciones se repiten en Java (tamaños máximos, fecha válida, la foto se verifica por su contenido); el autor de cada objeto sale de la sesión; cinco intentos fallidos de inicio de sesión bloquean diez minutos.
 - Se añadió cerrar sesión, un buscador en la lista y un botón para contactar a quien publicó el objeto.
+
+## Recuperar contraseña
+En la pantalla de inicio de sesión, **¿Olvidaste tu contraseña?** pide un código de 6 dígitos que llega al correo
+institucional. El código vence a los 15 minutos, sirve una sola vez y permite 5 intentos. Al cambiar la contraseña se
+cierran las sesiones abiertas de esa cuenta.
+
+Para que el código llegue por correo hay que configurar un servidor SMTP con variables de entorno antes de arrancar
+(ejemplo con Gmail y una "contraseña de aplicación"):
+
+```powershell
+$env:SPRING_MAIL_HOST = "smtp.gmail.com"
+$env:SPRING_MAIL_PORT = "587"
+$env:SPRING_MAIL_USERNAME = "tu_cuenta@gmail.com"
+$env:SPRING_MAIL_PASSWORD = "contraseña-de-aplicación"
+$env:SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH = "true"
+$env:SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE = "true"
+mvn spring-boot:run
+```
+
+Sin esa configuración (modo desarrollo) el código **no se envía**: aparece en la consola del servidor con el texto
+`[RECUPERACIÓN]`. No lo uses así en producción.
 
 ## Para publicarla en internet
 El servidor incluido habla HTTP simple. Ponle delante un proxy con HTTPS (Caddy, nginx...), que
