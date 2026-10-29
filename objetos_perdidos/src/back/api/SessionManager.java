@@ -49,6 +49,11 @@ final class SessionManager {
         return sesion;
     }
 
+    /** Tras cambiar el nombre en el perfil, las sesiones abiertas de esa cuenta muestran el nombre nuevo. */
+    static void actualizarNombre(String correo, String nombre) {
+        sesiones.replaceAll((token, s) -> s.correo().equalsIgnoreCase(correo) ? new Sesion(nombre, s.correo(), s.expira()) : s);
+    }
+
     static void cerrar(String token) {
         if (token != null) sesiones.remove(token);
     }

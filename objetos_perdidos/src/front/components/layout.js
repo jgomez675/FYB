@@ -26,6 +26,13 @@
       irA("#/login");
     };
 
+    const hash = location.hash || "";
+    const enlaces = [
+      { texto: "Objetos", hash: "#/objetos" },
+      { texto: "Favoritos", hash: "#/favoritos" },
+      { texto: "Mi perfil", hash: "#/perfil" },
+    ].map((e) => h("a", { href: e.hash, "aria-current": hash === e.hash || hash.startsWith(e.hash + "/") ? "page" : null }, e.texto));
+
     const barra = h(
       "header",
       { class: "topbar" },
@@ -33,11 +40,11 @@
         "div",
         { class: "topbar-inner" },
         h("a", { class: "brand-link", href: "#/objetos", "aria-label": App.config.name + ", ir al inicio" }, iconoMarca(), h("span", {}, App.config.name)),
+        h("nav", { class: "topbar-nav", "aria-label": "Principal" }, ...enlaces),
         h(
           "div",
           { class: "topbar-user" },
           h("span", { class: "user-name", text: usuario.nombre }),
-          usuario.rol === "admin" ? h("a", { class: "btn btn-ghost", href: "#/admin/categorias" }, "Gestionar categorías") : null,
           h("button", { class: "btn btn-ghost", type: "button", onclick: cerrarSesion }, "Cerrar sesión")
         )
       )

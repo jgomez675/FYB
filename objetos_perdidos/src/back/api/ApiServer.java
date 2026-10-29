@@ -4,9 +4,9 @@ import back.config.AppConfig;
 import back.model.ObjetoPerdido;
 import back.model.Usuario;
 import back.service.AuthService;
+import back.service.FavoritosService;
 import back.service.ObjetoPerdidoService;
 import back.service.RecompensasService;
-import back.service.CategoriasService;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -18,9 +18,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
@@ -36,7 +38,13 @@ import java.util.regex.Pattern;
  *   GET  /api/objetos         lista de objetos              [requiere sesión]
  *   GET  /api/objetos/{id}    detalle de un objeto          [requiere sesión]
  *   POST /api/objetos         publica un objeto             [requiere sesión]
+ *   DELETE /api/objetos/{id}  retira una publicación propia [requiere sesión]
  *   GET  /api/imagenes/{f}    foto de un objeto             [requiere sesión]
+ *   GET  /api/favoritos       objetos favoritos             [requiere sesión]
+ *   PUT  /api/favoritos/{id}  guarda un favorito            [requiere sesión]
+ *   DELETE /api/favoritos/{id} quita un favorito            [requiere sesión]
+ *   GET  /api/perfil          datos de contacto             [requiere sesión]
+ *   PUT  /api/perfil          actualiza los datos           [requiere sesión]
  */
 public final class ApiServer {
 
@@ -110,6 +118,15 @@ public final class ApiServer {
                 exigir(metodo, "GET");
                 sesion(ex);
                 return;
+            case "/api/perfil":
+                if (metodo.equals("GET")) verPerfil(ex);
+                else if (metodo.equals("PUT")) actualizarPerfil(ex);
+                else throw new ApiException(405, "Método no permitido.");
+                return;
+            case "/api/favoritos":
+                exigir(metodo, "GET");
+                listarFavoritos(ex);
+                return;
             case "/api/puntos":
                 exigir(metodo, "GET");
                 puntos(ex);
@@ -118,10 +135,9 @@ public final class ApiServer {
                 exigir(metodo, "POST");
                 confirmarDevolucion(ex);
                 return;
-            case "/api/categorias":
-                if (metodo.equals("GET")) listarCategorias(ex);
-                else if (metodo.equals("POST")) crearCategoria(ex);
-                else throw new ApiException(405, "Método no permitido.");
+            case "/api/ruleta/girar":
+                exigir(metodo, "POST");
+                girarRuleta(ex);
                 return;
             case "/api/objetos":
                 if (metodo.equals("GET")) listarObjetos(ex);
@@ -133,18 +149,14 @@ public final class ApiServer {
         }
 
         if (ruta.startsWith("/api/objetos/")) {
-            String resto = ruta.substring("/api/objetos/".length());
-            if (resto.endsWith("/editar")) {
-                exigir(metodo, "PUT");
-                editarObjeto(ex, resto.substring(0, resto.length() - "/editar".length()));
-            } else {
-                exigir(metodo, "GET");
-                detalleObjeto(ex, resto);
-            }
-        } else if (ruta.startsWith("/api/categorias/")) {
-            String resto = ruta.substring("/api/categorias/".length());
-            if (resto.endsWith("/editar")) { exigir(metodo, "PUT"); editarCategoria(ex, resto.substring(0, resto.length()-"/editar".length())); }
-            else if (metodo.equals("DELETE")) eliminarCategoria(ex, resto);
+            String id = ruta.substring("/api/objetos/".length());
+            if (metodo.equals("GET")) detalleObjeto(ex, id);
+            else if (metodo.equals("DELETE")) retirarObjeto(ex, id);
+            else throw new ApiException(405, "Método no permitido.");
+        } else if (ruta.startsWith("/api/favoritos/")) {
+            String id = ruta.substring("/api/favoritos/".length());
+            if (metodo.equals("PUT")) guardarFavorito(ex, id);
+            else if (metodo.equals("DELETE")) quitarFavorito(ex, id);
             else throw new ApiException(405, "Método no permitido.");
         } else if (ruta.startsWith("/api/imagenes/")) {
             exigir(metodo, "GET");
@@ -236,19 +248,20 @@ public final class ApiServer {
     /* ---------------- Objetos perdidos ---------------- */
 
     private static void listarObjetos(HttpExchange ex) throws IOException {
-        requerirSesion(ex);
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        Set<Integer> favoritos = new HashSet<>(FavoritosService.idsDe(sesion.correo()));
 
         List<ObjetoPerdido> objetos = ObjetoPerdidoService.obtenerObjetos();
         objetos.sort(Comparator.comparingInt(ObjetoPerdido::getId).reversed()); // más recientes primero
 
         List<Object> lista = new ArrayList<>();
-        for (ObjetoPerdido objeto : objetos) lista.add(objetoJson(objeto));
+        for (ObjetoPerdido objeto : objetos) lista.add(objetoJsonPara(objeto, sesion, favoritos));
 
         Http.json(ex, 200, mapa("objetos", lista));
     }
 
     private static void detalleObjeto(HttpExchange ex, String idTexto) throws IOException {
-        requerirSesion(ex);
+        SessionManager.Sesion sesion = requerirSesion(ex);
 
         ObjetoPerdido objeto = null;
         try {
@@ -258,7 +271,34 @@ public final class ApiServer {
         }
 
         if (objeto == null) throw new ApiException(404, "No encontramos este objeto.");
-        Http.json(ex, 200, mapa("objeto", objetoJson(objeto)));
+
+        Set<Integer> favoritos = new HashSet<>(FavoritosService.idsDe(sesion.correo()));
+        Map<String, Object> json = objetoJsonPara(objeto, sesion, favoritos);
+
+        // Datos de contacto actuales de quien lo publicó (los que mantiene en su perfil).
+        Usuario autor = AuthService.obtenerUsuario(objeto.getCorreoUsuario());
+        json.put("publicadoPor", autor == null ? "" : autor.getNombre());
+        json.put("telefonoContacto", autor == null ? "" : autor.getTelefono());
+
+        Http.json(ex, 200, mapa("objeto", json));
+    }
+
+    private static void retirarObjeto(HttpExchange ex, String idTexto) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        int id = idDeRuta(idTexto);
+
+        String resultado = ObjetoPerdidoService.eliminarObjeto(id, sesion.correo());
+
+        if (ObjetoPerdidoService.OBJETO_ELIMINADO.equals(resultado)) {
+            FavoritosService.quitarObjeto(id);
+            Http.json(ex, 200, mapa("ok", true));
+        } else if (ObjetoPerdidoService.OBJETO_NO_ENCONTRADO.equals(resultado)) {
+            throw new ApiException(404, resultado);
+        } else if (ObjetoPerdidoService.SIN_PERMISO.equals(resultado)) {
+            throw new ApiException(403, resultado);
+        } else {
+            throw new ApiException(500, resultado);
+        }
     }
 
     private static void publicarObjeto(HttpExchange ex) throws IOException {
@@ -282,8 +322,7 @@ public final class ApiServer {
                     Http.texto(cuerpo, "lugar"),
                     Http.texto(cuerpo, "fecha"),
                     temporal,
-                    sesion.correo(),
-                    Http.texto(cuerpo, "categoria")
+                    sesion.correo()
             );
 
             if (ObjetoPerdidoService.OBJETO_GUARDADO.equals(resultado)) {
@@ -327,47 +366,94 @@ public final class ApiServer {
     }
 
 
-    private static void editarObjeto(HttpExchange ex, String idTexto) throws IOException {
+    /* ---------------- Favoritos ---------------- */
+
+    private static void listarFavoritos(HttpExchange ex) throws IOException {
         SessionManager.Sesion sesion = requerirSesion(ex);
-        int id;
-        try { id = Integer.parseInt(idTexto); } catch (NumberFormatException e) { throw new ApiException(404, "No encontramos este objeto."); }
-        Map<String,Object> cuerpo = Http.leerJson(ex);
-        boolean admin = esAdmin(sesion);
-        String resultado = ObjetoPerdidoService.editarObjeto(id, sesion.correo(), admin,
-                Http.texto(cuerpo,"nombre"), Http.texto(cuerpo,"descripcion"), Http.texto(cuerpo,"lugar"),
-                Http.texto(cuerpo,"fecha"), Http.texto(cuerpo,"categoria"));
-        if ("OBJETO_ACTUALIZADO".equals(resultado)) Http.json(ex, 200, mapa("ok",true));
-        else if (resultado.startsWith("Solo puedes")) throw new ApiException(403, resultado);
-        else if (resultado.startsWith("No encontramos")) throw new ApiException(404, resultado);
-        else throw new ApiException(400, resultado);
+
+        List<Integer> ids = FavoritosService.idsDe(sesion.correo());
+        Set<Integer> favoritos = new HashSet<>(ids);
+
+        // Solo objetos que siguen publicados, del último guardado al primero.
+        List<Object> lista = new ArrayList<>();
+        for (int id : ids) {
+            ObjetoPerdido objeto = ObjetoPerdidoService.obtenerObjeto(id);
+            if (objeto != null) lista.add(objetoJsonPara(objeto, sesion, favoritos));
+        }
+
+        Http.json(ex, 200, mapa("favoritos", lista));
     }
 
-    private static boolean esAdmin(SessionManager.Sesion sesion) { return sesion.correo().equalsIgnoreCase(AppConfig.CORREO_ADMIN); }
-    private static void exigirAdmin(HttpExchange ex) { if (!esAdmin(requerirSesion(ex))) throw new ApiException(403, "Esta opción es solo para el administrador."); }
+    private static void guardarFavorito(HttpExchange ex, String idTexto) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        int id = idDeRuta(idTexto);
 
-    private static void listarCategorias(HttpExchange ex) throws IOException {
-        requerirSesion(ex);
-        Http.json(ex, 200, mapa("categorias", CategoriasService.listar()));
-    }
-    private static void crearCategoria(HttpExchange ex) throws IOException {
-        exigirAdmin(ex); String r = CategoriasService.crear(Http.texto(Http.leerJson(ex), "nombre"));
-        if ("OK".equals(r)) Http.json(ex, 201, mapa("ok",true,"categorias",CategoriasService.listar())); else throw new ApiException(400,r);
-    }
-    private static void editarCategoria(HttpExchange ex, String nombreCodificado) throws IOException {
-        exigirAdmin(ex); String anterior = decodificar(nombreCodificado); Map<String,Object> cuerpo=Http.leerJson(ex);
-        String r=CategoriasService.editar(anterior,Http.texto(cuerpo,"nombre"));
-        if ("OK".equals(r)) Http.json(ex,200,mapa("ok",true,"categorias",CategoriasService.listar())); else throw new ApiException(400,r);
-    }
-    private static void eliminarCategoria(HttpExchange ex, String nombreCodificado) throws IOException {
-        exigirAdmin(ex); String r=CategoriasService.eliminar(decodificar(nombreCodificado));
-        if ("OK".equals(r)) Http.json(ex,200,mapa("ok",true,"categorias",CategoriasService.listar())); else throw new ApiException(400,r);
-    }
-    private static String decodificar(String texto) {
-        try { return java.net.URLDecoder.decode(texto, java.nio.charset.StandardCharsets.UTF_8); }
-        catch (Exception e) { throw new ApiException(400,"Categoría no válida."); }
+        String resultado = FavoritosService.agregar(sesion.correo(), id);
+
+        if (FavoritosService.FAVORITO_GUARDADO.equals(resultado)) {
+            Http.json(ex, 200, mapa("ok", true, "favorito", true));
+        } else if (FavoritosService.OBJETO_NO_ENCONTRADO.equals(resultado)) {
+            throw new ApiException(404, resultado);
+        } else {
+            throw new ApiException(500, resultado);
+        }
     }
 
-    /* ---------------- Puntos automáticos ---------------- */
+    private static void quitarFavorito(HttpExchange ex, String idTexto) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        int id = idDeRuta(idTexto);
+
+        String resultado = FavoritosService.quitar(sesion.correo(), id);
+
+        if (FavoritosService.FAVORITO_QUITADO.equals(resultado)) {
+            Http.json(ex, 200, mapa("ok", true, "favorito", false));
+        } else {
+            throw new ApiException(500, resultado);
+        }
+    }
+
+    private static int idDeRuta(String texto) {
+        try {
+            return Integer.parseInt(texto);
+        } catch (NumberFormatException e) {
+            throw new ApiException(404, "No encontramos este objeto.");
+        }
+    }
+
+    /* ---------------- Perfil ---------------- */
+
+    private static void verPerfil(HttpExchange ex) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        Http.json(ex, 200, mapa("perfil", perfilJson(sesion.correo())));
+    }
+
+    private static void actualizarPerfil(HttpExchange ex) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        Map<String, Object> cuerpo = Http.leerJson(ex);
+
+        // El correo no se puede cambiar: sale de la sesión, nunca de lo que diga el navegador.
+        String resultado = AuthService.actualizarPerfil(
+                sesion.correo(),
+                Http.texto(cuerpo, "nombre"),
+                Http.texto(cuerpo, "telefono")
+        );
+
+        if (!AuthService.PERFIL_ACTUALIZADO.equals(resultado)) {
+            throw new ApiException(400, resultado);
+        }
+
+        Map<String, Object> perfil = perfilJson(sesion.correo());
+        SessionManager.actualizarNombre(sesion.correo(), (String) perfil.get("nombre"));
+        Http.json(ex, 200, mapa("perfil", perfil));
+    }
+
+    private static Map<String, Object> perfilJson(String correo) {
+        Usuario usuario = AuthService.obtenerUsuario(correo);
+        if (usuario == null) throw new ApiException(404, "No encontramos tu cuenta.");
+        return mapa("nombre", usuario.getNombre(), "correo", usuario.getCorreo(), "telefono", usuario.getTelefono());
+    }
+
+    /* ---------------- Puntos y ruleta ---------------- */
     private static void puntos(HttpExchange ex) throws IOException {
         SessionManager.Sesion sesion = requerirSesion(ex);
         Http.json(ex, 200, mapa("saldo", RecompensasService.saldo(sesion.correo()), "recompensas", RecompensasService.resumen(sesion.correo())));
@@ -384,7 +470,6 @@ public final class ApiServer {
         int id = idObjeto(Http.leerJson(ex));
         ObjetoPerdido objeto = ObjetoPerdidoService.obtenerObjeto(id);
         if (objeto == null) throw new ApiException(404, "No encontramos este objeto.");
-        if (objeto.getCorreoUsuario().equalsIgnoreCase(sesion.correo())) throw new ApiException(403, "No puedes ganar puntos por tu propia publicación.");
         try {
             int puntos = RecompensasService.confirmar(sesion.correo(), id, RecompensasService.puntosCategoria(objeto.getNombre()));
             if (puntos < 0) throw new ApiException(409, "Ya recibiste puntos por este objeto.");
@@ -392,10 +477,25 @@ public final class ApiServer {
         } catch (IOException e) { throw e; }
     }
 
+    private static void girarRuleta(HttpExchange ex) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        int id = idObjeto(Http.leerJson(ex));
+        try { Http.json(ex, 200, RecompensasService.girar(sesion.correo(), id)); }
+        catch (IllegalStateException e) { throw new ApiException(409, e.getMessage()); }
+    }
+
     /* ---------------- Formato de las respuestas ---------------- */
 
     private static Map<String, Object> usuarioJson(String nombre, String correo) {
-        return mapa("nombre", nombre, "correo", correo, "rol", correo != null && correo.equalsIgnoreCase(AppConfig.CORREO_ADMIN) ? "admin" : "estudiante");
+        return mapa("nombre", nombre, "correo", correo);
+    }
+
+    // Además del objeto, indica si es favorito de la persona y si lo publicó ella.
+    private static Map<String, Object> objetoJsonPara(ObjetoPerdido o, SessionManager.Sesion sesion, Set<Integer> favoritos) {
+        Map<String, Object> json = objetoJson(o);
+        json.put("favorito", favoritos.contains(o.getId()));
+        json.put("propio", o.getCorreoUsuario() != null && o.getCorreoUsuario().equalsIgnoreCase(sesion.correo()));
+        return json;
     }
 
     private static Map<String, Object> objetoJson(ObjetoPerdido o) {
@@ -410,8 +510,7 @@ public final class ApiServer {
                 "lugar", o.getLugar(),
                 "fecha", o.getFecha(),
                 "imagenUrl", NOMBRE_IMAGEN.matcher(archivo).matches() ? "/api/imagenes/" + archivo : "",
-                "correoUsuario", o.getCorreoUsuario(),
-                "categoria", o.getCategoria()
+                "correoUsuario", o.getCorreoUsuario()
         );
     }
 

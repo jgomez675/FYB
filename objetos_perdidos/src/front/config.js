@@ -16,5 +16,5 @@ window.App = {
     maxImageSide: 900,
   },
 
-  front: { api: {}, components: {}, login: {}, register: {}, objetos: {} },
+  front: { api: {}, components: {}, login: {}, register: {}, objetos: {}, favoritos: {}, perfil: {} },
 };

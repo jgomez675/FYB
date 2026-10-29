@@ -600,6 +600,171 @@ h1:focus {
   margin: 0 0 20px;
 }
 
+/* ---------- Navegación de la barra superior ---------- */
+
+.topbar-nav {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.topbar-nav a {
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--slate-200);
+  border-radius: 8px;
+}
+.topbar-nav a:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+.topbar-nav a[aria-current="page"] {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ---------- Favoritos ---------- */
+
+.obj-top {
+  position: relative;
+}
+
+.fav-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--slate-500);
+  background: rgba(255, 255, 255, 0.95);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: color 0.15s, transform 0.15s;
+}
+.fav-btn:hover,
+.fav-btn.is-active {
+  color: var(--red-600);
+}
+.fav-btn:active {
+  transform: scale(0.92);
+}
+
+.heart-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.is-active .heart-icon {
+  fill: currentColor;
+}
+
+.fav-text {
+  gap: 8px;
+}
+.fav-text .heart-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--red-600);
+}
+
+.fav-btn[aria-busy="true"],
+.fav-text[aria-busy="true"] {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.badge {
+  align-self: flex-start;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue-800);
+  background: #dbeafe;
+  border-radius: 999px;
+}
+
+.avisos .flash {
+  max-width: 560px;
+}
+
+/* ---------- Detalle: acciones y retirar publicación ---------- */
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.facts a {
+  color: var(--blue-700);
+}
+
+.btn-danger {
+  color: #fff;
+  background: var(--red-600);
+}
+.btn-danger:hover {
+  background: #b91c1c;
+}
+.btn-danger:active {
+  background: #991b1b;
+}
+
+.retirar {
+  width: 100%;
+  padding-top: 16px;
+  border-top: 1px solid var(--slate-200);
+}
+.confirm-text {
+  margin: 0 0 12px;
+  font-weight: 600;
+  color: var(--navy-900);
+}
+
+/* ---------- Perfil ---------- */
+
+.form-lede {
+  margin: -8px 0 20px;
+  color: var(--slate-500);
+}
+.hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--slate-500);
+}
+.field input[readonly] {
+  color: var(--slate-500);
+  background: var(--slate-100);
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .topbar-inner {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .topbar-nav {
+    order: 3;
+    flex: 1 0 100%;
+  }
+  .topbar-nav a {
+    flex: 1;
+    text-align: center;
+  }
+}
+
 /* ---------- Pantallas pequeñas ---------- */
 
 @media (max-width: 760px) {
@@ -663,24 +828,3 @@ h1:focus {
     animation: none;
   }
 }
-
-
-/* Edición de publicaciones, administración de categorías y puntos */
-.toolbar select, .category-admin-row input, .field select {
-  width: 100%;
-  min-height: 44px;
-  border: 1px solid var(--line, #dbe3ef);
-  border-radius: 10px;
-  padding: 10px 12px;
-  background: #fff;
-  color: inherit;
-  font: inherit;
-}
-.category-admin-list { display: grid; gap: 12px; margin-top: 16px; }
-.category-admin-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; }
-.category-admin-row .actions { display: flex; gap: 8px; }
-.category-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
-.category-add .msg { grid-column: 1 / -1; }
-.btn-danger { background: #b91c1c; color: #fff; border: 1px solid #b91c1c; }
-.points-box { margin-top: 22px; padding: 16px; border-radius: 12px; background: #eff6ff; display: grid; gap: 10px; }
-@media (max-width: 640px) { .category-admin-row { grid-template-columns: 1fr; } .category-add { grid-template-columns: 1fr; } }
