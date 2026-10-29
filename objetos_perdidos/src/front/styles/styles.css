@@ -645,3 +645,42 @@ h1:focus {
   padding: 24px;
   color: #fff;
 }
+.wheel-disc.is-spinning {
+  animation: fyb-wheel-spin 2.4s cubic-bezier(.12, .72, .16, 1) both;
+}
+
+@keyframes fyb-wheel-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(1800deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel-disc.is-spinning {
+    animation: none;
+  }
+}
+
+
+/* Edición de publicaciones, administración de categorías y puntos */
+.toolbar select, .category-admin-row input, .field select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line, #dbe3ef);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+.category-admin-list { display: grid; gap: 12px; margin-top: 16px; }
+.category-admin-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; }
+.category-admin-row .actions { display: flex; gap: 8px; }
+.category-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.category-add .msg { grid-column: 1 / -1; }
+.btn-danger { background: #b91c1c; color: #fff; border: 1px solid #b91c1c; }
+.points-box { margin-top: 22px; padding: 16px; border-radius: 12px; background: #eff6ff; display: grid; gap: 10px; }
+@media (max-width: 640px) { .category-admin-row { grid-template-columns: 1fr; } .category-add { grid-template-columns: 1fr; } }

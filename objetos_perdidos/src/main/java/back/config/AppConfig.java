@@ -16,6 +16,9 @@ public final class AppConfig {
 
     public static final int PUERTO = entero("PORT", 8080);
 
+    /** Correo con permisos administrativos; se puede cambiar con FYB_ADMIN_EMAIL. */
+    public static final String CORREO_ADMIN = variable("FYB_ADMIN_EMAIL", "admin@usa.edu.co").toLowerCase();
+
     /** Carpeta con el HTML/CSS/JS, relativa a donde se ejecuta el servidor. */
     public static final String CARPETA_FRONT = variable("FYB_FRONT_DIR", "src/front");
 

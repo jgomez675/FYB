@@ -5,6 +5,8 @@ import back.model.ObjetoPerdido;
 import back.model.Usuario;
 import back.service.AuthService;
 import back.service.ObjetoPerdidoService;
+import back.service.RecompensasService;
+import back.service.CategoriasService;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -108,6 +110,19 @@ public final class ApiServer {
                 exigir(metodo, "GET");
                 sesion(ex);
                 return;
+            case "/api/puntos":
+                exigir(metodo, "GET");
+                puntos(ex);
+                return;
+            case "/api/devoluciones/confirmar":
+                exigir(metodo, "POST");
+                confirmarDevolucion(ex);
+                return;
+            case "/api/categorias":
+                if (metodo.equals("GET")) listarCategorias(ex);
+                else if (metodo.equals("POST")) crearCategoria(ex);
+                else throw new ApiException(405, "Método no permitido.");
+                return;
             case "/api/objetos":
                 if (metodo.equals("GET")) listarObjetos(ex);
                 else if (metodo.equals("POST")) publicarObjeto(ex);
@@ -118,8 +133,19 @@ public final class ApiServer {
         }
 
         if (ruta.startsWith("/api/objetos/")) {
-            exigir(metodo, "GET");
-            detalleObjeto(ex, ruta.substring("/api/objetos/".length()));
+            String resto = ruta.substring("/api/objetos/".length());
+            if (resto.endsWith("/editar")) {
+                exigir(metodo, "PUT");
+                editarObjeto(ex, resto.substring(0, resto.length() - "/editar".length()));
+            } else {
+                exigir(metodo, "GET");
+                detalleObjeto(ex, resto);
+            }
+        } else if (ruta.startsWith("/api/categorias/")) {
+            String resto = ruta.substring("/api/categorias/".length());
+            if (resto.endsWith("/editar")) { exigir(metodo, "PUT"); editarCategoria(ex, resto.substring(0, resto.length()-"/editar".length())); }
+            else if (metodo.equals("DELETE")) eliminarCategoria(ex, resto);
+            else throw new ApiException(405, "Método no permitido.");
         } else if (ruta.startsWith("/api/imagenes/")) {
             exigir(metodo, "GET");
             imagen(ex, ruta.substring("/api/imagenes/".length()));
@@ -256,7 +282,8 @@ public final class ApiServer {
                     Http.texto(cuerpo, "lugar"),
                     Http.texto(cuerpo, "fecha"),
                     temporal,
-                    sesion.correo()
+                    sesion.correo(),
+                    Http.texto(cuerpo, "categoria")
             );
 
             if (ObjetoPerdidoService.OBJETO_GUARDADO.equals(resultado)) {
@@ -299,10 +326,76 @@ public final class ApiServer {
         return "image/jpeg";
     }
 
+
+    private static void editarObjeto(HttpExchange ex, String idTexto) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        int id;
+        try { id = Integer.parseInt(idTexto); } catch (NumberFormatException e) { throw new ApiException(404, "No encontramos este objeto."); }
+        Map<String,Object> cuerpo = Http.leerJson(ex);
+        boolean admin = esAdmin(sesion);
+        String resultado = ObjetoPerdidoService.editarObjeto(id, sesion.correo(), admin,
+                Http.texto(cuerpo,"nombre"), Http.texto(cuerpo,"descripcion"), Http.texto(cuerpo,"lugar"),
+                Http.texto(cuerpo,"fecha"), Http.texto(cuerpo,"categoria"));
+        if ("OBJETO_ACTUALIZADO".equals(resultado)) Http.json(ex, 200, mapa("ok",true));
+        else if (resultado.startsWith("Solo puedes")) throw new ApiException(403, resultado);
+        else if (resultado.startsWith("No encontramos")) throw new ApiException(404, resultado);
+        else throw new ApiException(400, resultado);
+    }
+
+    private static boolean esAdmin(SessionManager.Sesion sesion) { return sesion.correo().equalsIgnoreCase(AppConfig.CORREO_ADMIN); }
+    private static void exigirAdmin(HttpExchange ex) { if (!esAdmin(requerirSesion(ex))) throw new ApiException(403, "Esta opción es solo para el administrador."); }
+
+    private static void listarCategorias(HttpExchange ex) throws IOException {
+        requerirSesion(ex);
+        Http.json(ex, 200, mapa("categorias", CategoriasService.listar()));
+    }
+    private static void crearCategoria(HttpExchange ex) throws IOException {
+        exigirAdmin(ex); String r = CategoriasService.crear(Http.texto(Http.leerJson(ex), "nombre"));
+        if ("OK".equals(r)) Http.json(ex, 201, mapa("ok",true,"categorias",CategoriasService.listar())); else throw new ApiException(400,r);
+    }
+    private static void editarCategoria(HttpExchange ex, String nombreCodificado) throws IOException {
+        exigirAdmin(ex); String anterior = decodificar(nombreCodificado); Map<String,Object> cuerpo=Http.leerJson(ex);
+        String r=CategoriasService.editar(anterior,Http.texto(cuerpo,"nombre"));
+        if ("OK".equals(r)) Http.json(ex,200,mapa("ok",true,"categorias",CategoriasService.listar())); else throw new ApiException(400,r);
+    }
+    private static void eliminarCategoria(HttpExchange ex, String nombreCodificado) throws IOException {
+        exigirAdmin(ex); String r=CategoriasService.eliminar(decodificar(nombreCodificado));
+        if ("OK".equals(r)) Http.json(ex,200,mapa("ok",true,"categorias",CategoriasService.listar())); else throw new ApiException(400,r);
+    }
+    private static String decodificar(String texto) {
+        try { return java.net.URLDecoder.decode(texto, java.nio.charset.StandardCharsets.UTF_8); }
+        catch (Exception e) { throw new ApiException(400,"Categoría no válida."); }
+    }
+
+    /* ---------------- Puntos automáticos ---------------- */
+    private static void puntos(HttpExchange ex) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        Http.json(ex, 200, mapa("saldo", RecompensasService.saldo(sesion.correo()), "recompensas", RecompensasService.resumen(sesion.correo())));
+    }
+
+    private static int idObjeto(Map<String,Object> cuerpo) {
+        Object valor = cuerpo.get("objetoId");
+        if (!(valor instanceof Number)) throw new ApiException(400, "Indica un objeto válido.");
+        return ((Number) valor).intValue();
+    }
+
+    private static void confirmarDevolucion(HttpExchange ex) throws IOException {
+        SessionManager.Sesion sesion = requerirSesion(ex);
+        int id = idObjeto(Http.leerJson(ex));
+        ObjetoPerdido objeto = ObjetoPerdidoService.obtenerObjeto(id);
+        if (objeto == null) throw new ApiException(404, "No encontramos este objeto.");
+        if (objeto.getCorreoUsuario().equalsIgnoreCase(sesion.correo())) throw new ApiException(403, "No puedes ganar puntos por tu propia publicación.");
+        try {
+            int puntos = RecompensasService.confirmar(sesion.correo(), id, RecompensasService.puntosCategoria(objeto.getNombre()));
+            if (puntos < 0) throw new ApiException(409, "Ya recibiste puntos por este objeto.");
+            Http.json(ex, 200, mapa("ok", true, "puntosGanados", puntos, "saldo", RecompensasService.saldo(sesion.correo())));
+        } catch (IOException e) { throw e; }
+    }
+
     /* ---------------- Formato de las respuestas ---------------- */
 
     private static Map<String, Object> usuarioJson(String nombre, String correo) {
-        return mapa("nombre", nombre, "correo", correo);
+        return mapa("nombre", nombre, "correo", correo, "rol", correo != null && correo.equalsIgnoreCase(AppConfig.CORREO_ADMIN) ? "admin" : "estudiante");
     }
 
     private static Map<String, Object> objetoJson(ObjetoPerdido o) {
@@ -317,7 +410,8 @@ public final class ApiServer {
                 "lugar", o.getLugar(),
                 "fecha", o.getFecha(),
                 "imagenUrl", NOMBRE_IMAGEN.matcher(archivo).matches() ? "/api/imagenes/" + archivo : "",
-                "correoUsuario", o.getCorreoUsuario()
+                "correoUsuario", o.getCorreoUsuario(),
+                "categoria", o.getCategoria()
         );
     }
 
