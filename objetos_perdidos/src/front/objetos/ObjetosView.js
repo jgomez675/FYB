@@ -15,6 +15,8 @@
       const lista = h("div", { class: "grid" });
       const estado = h("p", { class: "status-line", "aria-live": "polite" });
       const buscar = h("input", { id: "buscar", type: "search", placeholder: "Buscar por nombre, lugar o descripción", "aria-label": "Buscar objetos" });
+      const categorias = await ObjetosApi.obtenerCategorias();
+      const filtroCategoria = h("select", { id: "filtro-categoria", "aria-label": "Filtrar por categoría" }, h("option", { value: "" }, "Todas las categorías"), ...categorias.map((c) => h("option", { value: c }, c)));
 
       const pintar = () => {
         lista.replaceChildren();
@@ -28,7 +30,7 @@
         }
 
         const q = normalizar(buscar.value.trim());
-        const items = q ? objetos.filter((o) => normalizar([o.nombre, o.descripcion, o.lugar].join(" ")).includes(q)) : objetos;
+        const items = objetos.filter((o) => (!q || normalizar([o.nombre, o.descripcion, o.lugar].join(" ")).includes(q)) && (!filtroCategoria.value || (o.categoria || "Otros") === filtroCategoria.value));
 
         if (!items.length) {
           lista.append(h("div", { class: "empty" }, h("p", {}, "No hay resultados para “" + buscar.value.trim() + "”.")));
@@ -39,6 +41,7 @@
       };
 
       buscar.addEventListener("input", pintar);
+      filtroCategoria.addEventListener("change", pintar);
       pintar();
 
       return pantalla(
@@ -50,7 +53,7 @@
           h("div", {}, h("h1", {}, "Objetos perdidos"), h("p", { class: "lede" }, "Revisa las fotos y descripciones de los objetos publicados")),
           h("a", { class: "btn btn-primary", href: "#/publicar" }, "Publicar objeto")
         ),
-        objetos.length ? h("div", { class: "toolbar" }, buscar, estado) : null,
+        objetos.length ? h("div", { class: "toolbar" }, buscar, filtroCategoria, estado) : null,
         lista
       );
     }
@@ -69,6 +72,7 @@
           h("p", { class: "obj-desc" }, resumen),
           h("p", { class: "obj-meta" }, h("span", { class: "k" }, "Lugar: "), objeto.lugar),
           h("p", { class: "obj-meta" }, h("span", { class: "k" }, "Fecha: "), formatearFecha(objeto.fecha)),
+          h("p", { class: "obj-meta" }, h("span", { class: "k" }, "Categoría: "), objeto.categoria || "Otros"),
           h("a", { class: "btn btn-secondary", href: "#/objetos/" + objeto.id }, "Ver detalles")
         )
       );

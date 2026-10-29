@@ -8,15 +8,24 @@
   const { ObjetosApi } = App.front.api;
 
   class RegistrarObjetoView {
-    async mostrar({ usuario }) {
-      ponerTitulo("Publicar objeto");
-
+    async mostrar({ usuario, params = [] }) {
+      const idEditar = params[0] || null;
+      const objeto = idEditar ? await ObjetosApi.obtenerObjeto(idEditar) : null;
+      if (idEditar && (!objeto || (objeto.correoUsuario !== usuario.correo && usuario.rol !== "admin"))) {
+        ponerTitulo("Sin permiso");
+        return pantalla(usuario, h("section", { class: "card notice" }, h("h1", {}, "No puedes editar esta publicación"), h("a", { class: "btn btn-primary", href: "#/objetos" }, "Volver")));
+      }
+      ponerTitulo(idEditar ? "Editar objeto" : "Publicar objeto");
+      const categorias = await ObjetosApi.obtenerCategorias();
       const hoy = hoyISO();
       const mensaje = h("p", { class: "msg", role: "alert" });
-      const nombre = campo({ id: "nombre", etiqueta: "Nombre del objeto", autocomplete: "off" });
+      const nombre = campo({ id: "nombre", etiqueta: "Nombre del objeto", autocomplete: "off", value: objeto ? objeto.nombre : "" });
       const descripcion = campo({ id: "descripcion", etiqueta: "Descripción detallada", tag: "textarea", rows: "4" });
-      const lugar = campo({ id: "lugar", etiqueta: "Lugar donde se perdió", autocomplete: "off" });
-      const fecha = campo({ id: "fecha", etiqueta: "Fecha", type: "date", value: hoy, max: hoy });
+      if (objeto) descripcion.control.value = objeto.descripcion;
+      const lugar = campo({ id: "lugar", etiqueta: "Lugar donde se perdió", autocomplete: "off", value: objeto ? objeto.lugar : "" });
+      const fecha = campo({ id: "fecha", etiqueta: "Fecha", type: "date", value: objeto ? objeto.fecha : hoy, max: hoy });
+      const categoria = h("select", { id: "categoria", name: "categoria" }, ...categorias.map((c) => h("option", { value: c, selected: objeto ? objeto.categoria === c : c === "Otros" }, c)));
+      const campoCategoria = h("div", { class: "field" }, h("label", { for: "categoria" }, "Categoría"), categoria);
 
       let archivo = null;
       let urlVistaPrevia = null;
@@ -39,7 +48,7 @@
         }
       });
 
-      const publicar = h("button", { class: "btn btn-primary", type: "submit" }, "Publicar objeto");
+      const publicar = h("button", { class: "btn btn-primary", type: "submit" }, objeto ? "Guardar cambios" : "Publicar objeto");
       const formulario = h(
         "form",
         { class: "form", novalidate: true },
@@ -47,7 +56,9 @@
         descripcion.wrap,
         lugar.wrap,
         fecha.wrap,
-        h("div", { class: "field" }, h("label", { for: "imagen" }, "Foto del objeto"), seleccionar, vistaPrevia),
+        campoCategoria,
+        objeto ? null : h("div", { class: "field" }, h("label", { for: "imagen" }, "Foto del objeto"), seleccionar, vistaPrevia),
+        objeto && objeto.imagenUrl ? h("img", { class: "preview", src: objeto.imagenUrl, alt: "Foto actual del objeto" }) : null,
         h("div", { class: "actions" }, publicar, h("a", { class: "btn btn-secondary", href: "#/objetos" }, "Volver")),
         mensaje
       );
@@ -57,19 +68,14 @@
 
         ocupado(publicar, true);
         try {
-          const resultado = await ObjetosApi.guardarObjeto(
-            nombre.control.value,
-            descripcion.control.value,
-            lugar.control.value,
-            fecha.control.value,
-            archivo
-          );
-
-          if (resultado === ObjetosApi.OBJETO_GUARDADO) {
-            guardarAviso("Objeto publicado correctamente.");
-            irA("#/objetos");
+          if (objeto) {
+            await ObjetosApi.editarObjeto(idEditar, nombre.control.value, descripcion.control.value, lugar.control.value, fecha.control.value, categoria.value);
+            guardarAviso("Cambios guardados correctamente.");
+            irA("#/objetos/" + idEditar);
           } else {
-            mostrarMensaje(mensaje, resultado, "error");
+            const resultado = await ObjetosApi.guardarObjeto(nombre.control.value, descripcion.control.value, lugar.control.value, fecha.control.value, archivo, categoria.value);
+            if (resultado === ObjetosApi.OBJETO_GUARDADO) { guardarAviso("Objeto publicado correctamente."); irA("#/objetos"); }
+            else mostrarMensaje(mensaje, resultado, "error");
           }
         } catch (error) {
           if (error.estado === 401) {
@@ -83,7 +89,7 @@
         }
       });
 
-      return pantalla(usuario, h("section", { class: "card form-card" }, h("h1", {}, "Publicar objeto perdido"), formulario));
+      return pantalla(usuario, h("section", { class: "card form-card" }, h("h1", {}, objeto ? "Editar objeto publicado" : "Publicar objeto perdido"), formulario));
     }
   }
 
