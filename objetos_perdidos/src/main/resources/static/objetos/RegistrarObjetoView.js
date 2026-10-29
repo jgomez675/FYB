@@ -4,7 +4,7 @@
   const { h, campo, mostrarMensaje, ocupado, hoyISO } = App.front.components.dom;
   const { pantalla } = App.front.components.layout;
   const { guardarAviso, irA, ponerTitulo } = App.front.components.navigation;
-  const { ObjetosApi } = App.front.api;
+  const { ObjetosApi, CategoriasApi } = App.front.api;
 
   class RegistrarObjetoView {
     async mostrar({ usuario }) {
@@ -25,13 +25,9 @@
         autocomplete: "off"
       });
 
+      const listaCategorias = await CategoriasApi.obtenerConRespaldo();
       const categoria = h("select", { id: "categoria", name: "categoria" },
-        h("option", { value: "Tecnología" }, "Tecnología"),
-        h("option", { value: "Documentos" }, "Documentos"),
-        h("option", { value: "Accesorios" }, "Accesorios"),
-        h("option", { value: "Ropa" }, "Ropa"),
-        h("option", { value: "Llaves" }, "Llaves"),
-        h("option", { value: "Otros", selected: true }, "Otros")
+        ...listaCategorias.map((c) => h("option", { value: c, selected: c === "Otros" }, c))
       );
 
       const estado = h("select", { id: "estado", name: "estado" },

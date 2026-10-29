@@ -28,6 +28,8 @@
 
   const { PuntosView } = App.front.puntos;
 
+  const { CategoriasAdminView } = App.front.categorias;
+
   const rutas = [
     {
       patron: /^#\/login$/,
@@ -58,6 +60,11 @@
       patron: /^#\/puntos$/,
       requiereSesion: true,
       vista: PuntosView
+    },
+    {
+      patron: /^#\/admin\/categorias$/,
+      requiereSesion: true,
+      vista: CategoriasAdminView
     }
   ];
 

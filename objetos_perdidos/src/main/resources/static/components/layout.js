@@ -85,6 +85,17 @@
             "Mis puntos"
           ),
 
+          usuario.rol === "admin"
+            ? h(
+                "a",
+                {
+                  class: "btn btn-ghost",
+                  href: "#/admin/categorias"
+                },
+                "Gestionar categorías"
+              )
+            : null,
+
           h(
             "button",
             {

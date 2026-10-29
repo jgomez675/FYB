@@ -30,7 +30,10 @@ public class SesionController {
                 "usuario",
                 Map.of(
                         "nombre", sesion.nombre(),
-                        "correo", sesion.correo()
+                        "correo", sesion.correo(),
+                        "rol", back.categorias.AdminConfig.esAdmin(sesion.correo())
+                                ? "admin"
+                                : "estudiante"
                 )
         );
     }

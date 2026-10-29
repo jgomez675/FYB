@@ -1,0 +1,11 @@
+/* Estilos de la gestión de categorías (administrador). */
+.category-admin-list { display: grid; gap: 12px; margin-top: 16px; }
+.category-admin-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; }
+.category-admin-row input { width: 100%; min-height: 44px; border: 1px solid #dbe3ef; border-radius: 10px; padding: 10px 12px; background: #fff; color: inherit; font: inherit; }
+.category-admin-row input:disabled { background: #f1f5f9; color: #64748b; }
+.category-admin-row .actions { display: flex; gap: 8px; }
+.category-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.category-add .msg { grid-column: 1 / -1; }
+.btn-danger { background: #b91c1c; color: #fff; border: 1px solid #b91c1c; }
+.btn-danger:disabled, .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 640px) { .category-admin-row { grid-template-columns: 1fr; } .category-add { grid-template-columns: 1fr; } }

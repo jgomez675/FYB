@@ -4,7 +4,7 @@
   const { h, normalizar, formatearFecha } = App.front.components.dom;
   const { pantalla, imagenObjeto } = App.front.components.layout;
   const { tomarAviso, ponerTitulo } = App.front.components.navigation;
-  const { ObjetosApi } = App.front.api;
+  const { ObjetosApi, CategoriasApi } = App.front.api;
 
   class ObjetosView {
     async mostrar({ usuario }) {
@@ -20,14 +20,10 @@
         "aria-label": "Buscar objetos"
       });
 
+      const listaCategorias = await CategoriasApi.obtenerConRespaldo();
       const categoria = h("select", { class: "filter-select", "aria-label": "Filtrar por categoría" },
         h("option", { value: "" }, "Todas las categorías"),
-        h("option", { value: "Tecnología" }, "Tecnología"),
-        h("option", { value: "Documentos" }, "Documentos"),
-        h("option", { value: "Accesorios" }, "Accesorios"),
-        h("option", { value: "Ropa" }, "Ropa"),
-        h("option", { value: "Llaves" }, "Llaves"),
-        h("option", { value: "Otros" }, "Otros")
+        ...listaCategorias.map((c) => h("option", { value: c }, c))
       );
 
       const filtroEstado = h("select", { class: "filter-select", "aria-label": "Filtrar por estado" },

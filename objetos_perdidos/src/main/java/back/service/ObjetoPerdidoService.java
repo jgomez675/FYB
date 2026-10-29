@@ -506,17 +506,38 @@ public class ObjetoPerdidoService {
             return CATEGORIA_OTROS;
         }
 
-        return switch (categoria.trim()) {
+        // Las categorías las administra back.categorias.CategoriasService.
+        String existente =
+                back.categorias.CategoriasService.nombreExistente(categoria);
 
-            case "Tecnología",
-                 "Documentos",
-                 "Accesorios",
-                 "Ropa",
-                 "Llaves",
-                 "Otros" -> categoria.trim();
+        return existente != null ? existente : CATEGORIA_OTROS;
+    }
 
-            default -> CATEGORIA_OTROS;
-        };
+    /* Usado por back.categorias al renombrar o eliminar una categoría. */
+    public static void reasignarCategoria(
+            String anterior,
+            String nueva) {
+
+        boolean cambio = false;
+
+        for (ObjetoPerdido objeto : objetos) {
+
+            if (objeto.getCategoria().equals(anterior)) {
+                objeto.setCategoria(nueva);
+                cambio = true;
+            }
+        }
+
+        if (!cambio) {
+            return;
+        }
+
+        try {
+            guardarObjetos();
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "No se pudieron guardar los objetos.");
+        }
     }
 
     private static String validarEstado(

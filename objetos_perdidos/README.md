@@ -70,3 +70,9 @@ data/                                 usuarios.txt, objetos.txt y fotos (se crea
 El servidor incluido habla HTTP simple. Ponle delante un proxy con HTTPS (Caddy, nginx...), que
 reenvíe la cabecera `X-Forwarded-Proto: https`, o arranca con `FYB_COOKIE_SECURE=true`.
 Las sesiones viven en memoria: al reiniciar el servidor, todos deben volver a iniciar sesión.
+
+## Administrador y categorías
+El administrador es la cuenta cuyo correo coincide con `FYB_ADMIN_EMAIL` (por defecto `admin@usa.edu.co`; cámbialo
+antes de arrancar si quieres otro). Esa persona se registra como cualquier usuario y, al iniciar sesión, ve el botón
+**Gestionar categorías** para crear, renombrar o eliminar categorías (se guardan en `data/categorias.txt`). Al renombrar
+una categoría se actualizan los objetos que la usan; al eliminarla pasan a **Otros**, que no se puede borrar ni renombrar.
