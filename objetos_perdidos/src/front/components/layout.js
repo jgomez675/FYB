@@ -37,6 +37,7 @@
           "div",
           { class: "topbar-user" },
           h("span", { class: "user-name", text: usuario.nombre }),
+          usuario.rol === "admin" ? h("a", { class: "btn btn-ghost", href: "#/admin/categorias" }, "Gestionar categorías") : null,
           h("button", { class: "btn btn-ghost", type: "button", onclick: cerrarSesion }, "Cerrar sesión")
         )
       )
