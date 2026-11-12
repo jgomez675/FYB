@@ -160,6 +160,12 @@ public class ObjetoPerdido {
         this.correoEstudianteDevuelve = correoEstudiante;
     }
 
+    /** Deja el objeto como estaba si la devolución no se pudo guardar en el archivo. */
+    public void restaurarEstado(String estado, String correoEstudianteDevuelve) {
+        this.estado = estado;
+        this.correoEstudianteDevuelve = correoEstudianteDevuelve;
+    }
+
     public boolean estaDevuelto() {
         return "DEVUELTO".equalsIgnoreCase(estado);
     }

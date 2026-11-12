@@ -177,6 +177,15 @@
               },
               "Consulta tu saldo y las recompensas disponibles"
             )
+          ),
+
+          h(
+            "a",
+            {
+              class: "btn btn-secondary",
+              href: "#/puntos/historial"
+            },
+            "Ver historial de puntos"
           )
         ),
 

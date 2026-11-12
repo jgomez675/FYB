@@ -27,7 +27,7 @@
     MisPublicacionesView
   } = App.front.objetos;
 
-  const { PuntosView } = App.front.puntos;
+  const { PuntosView, HistorialPuntosView } = App.front.puntos;
   const { PerfilView } = App.front.perfil;
 
   const rutas = [
@@ -70,6 +70,11 @@
       patron: /^#\/puntos$/,
       requiereSesion: true,
       vista: PuntosView
+    },
+    {
+      patron: /^#\/puntos\/historial$/,
+      requiereSesion: true,
+      vista: HistorialPuntosView
     },
     {
       patron: /^#\/perfil$/,

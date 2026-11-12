@@ -6,9 +6,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -108,15 +110,79 @@ public class PuntosService {
         int nuevoSaldo =
                 saldoActual + cantidad;
 
+        /*
+         * Primero se guarda en el archivo y solo después se cambia el saldo en memoria.
+         * Si el archivo no se pudo escribir, el saldo queda igual: así lo que se ve en
+         * pantalla nunca es distinto de lo que se conserva al reiniciar.
+         */
+        if (!guardarMovimiento(
+                correoNormalizado,
+                cantidad,
+                motivo)) {
+
+            return saldoActual;
+        }
+
         puntos.put(
                 correoNormalizado,
                 nuevoSaldo
         );
 
-        guardarMovimiento(
+        return nuevoSaldo;
+    }
+
+
+    /*
+     * Descuenta puntos (por ejemplo, al canjear una recompensa) y guarda el
+     * movimiento con cantidad negativa. Lanza un error si el saldo no alcanza.
+     * Todavía ninguna pantalla la usa: queda lista para cuando exista el canje.
+     */
+    public static synchronized int descontarPuntos(
+            String correo,
+            int cantidad,
+            String motivo) {
+
+        if (correo == null || correo.isBlank()) {
+            throw new IllegalArgumentException(
+                    "El correo del estudiante es obligatorio."
+            );
+        }
+
+        if (cantidad <= 0) {
+            throw new IllegalArgumentException(
+                    "La cantidad de puntos debe ser mayor que cero."
+            );
+        }
+
+        String correoNormalizado =
+                normalizarCorreo(correo);
+
+        int saldoActual =
+                puntos.getOrDefault(
+                        correoNormalizado,
+                        0
+                );
+
+        if (saldoActual < cantidad) {
+            throw new IllegalArgumentException(
+                    "No tienes puntos suficientes."
+            );
+        }
+
+        if (!guardarMovimiento(
                 correoNormalizado,
-                cantidad,
-                motivo
+                -cantidad,
+                motivo)) {
+
+            return saldoActual;
+        }
+
+        int nuevoSaldo =
+                saldoActual - cantidad;
+
+        puntos.put(
+                correoNormalizado,
+                nuevoSaldo
         );
 
         return nuevoSaldo;
@@ -153,18 +219,21 @@ public class PuntosService {
             return 0;
         }
 
-        int nuevoSaldo =
-                agregarPuntos(
-                        correoNormalizado,
-                        PUNTOS_POR_VER_OBJETO,
-                        "Visualizacion del objeto " + idObjeto
-                );
+        /*
+         * Primero se anota que este objeto ya dio su punto. Si algo falla después,
+         * lo peor que pasa es que no se entrega el punto; nunca se entrega dos veces.
+         */
+        if (!guardarVisualizacion(clave)) {
+            return 0;
+        }
 
         visualizacionesConPuntos.add(clave);
 
-        guardarVisualizacion(clave);
-
-        return nuevoSaldo;
+        return agregarPuntos(
+                correoNormalizado,
+                PUNTOS_POR_VER_OBJETO,
+                "Visualizacion del objeto " + idObjeto
+        );
     }
 
 
@@ -180,7 +249,7 @@ public class PuntosService {
         }
 
         String categoriaNormalizada =
-                categoria.trim().toLowerCase();
+                categoria.trim().toLowerCase(Locale.ROOT);
 
         switch (categoriaNormalizada) {
 
@@ -343,65 +412,54 @@ public class PuntosService {
 
 
     /*
-     * Guarda un movimiento de puntos.
+     * Guarda un movimiento de puntos. Devuelve false si no se pudo escribir.
      */
-    private static void guardarMovimiento(
+    private static boolean guardarMovimiento(
             String correo,
             int cantidad,
             String motivo) {
 
-        try {
+        String linea =
+                correo +
+                "|" +
+                cantidad +
+                "|" +
+                limpiar(motivo) +
+                "|" +
+                LocalDate.now();
 
-            Path carpeta =
-                    ARCHIVO_PUNTOS.getParent();
-
-            if (carpeta != null) {
-                Files.createDirectories(carpeta);
-            }
-
-            try (
-                    BufferedWriter escritor =
-                            Files.newBufferedWriter(
-                                    ARCHIVO_PUNTOS,
-                                    java.nio.file.StandardOpenOption.CREATE,
-                                    java.nio.file.StandardOpenOption.APPEND
-                            )
-            ) {
-
-                escritor.write(
-                        correo +
-                        "|" +
-                        cantidad +
-                        "|" +
-                        limpiar(motivo) +
-                        "|" +
-                        LocalDate.now()
-                );
-
-                escritor.newLine();
-            }
-
-        } catch (IOException e) {
-
-            System.err.println(
-                    "No se pudo guardar el movimiento de puntos: "
-                            + e.getMessage()
-            );
-        }
+        return anexarLinea(
+                ARCHIVO_PUNTOS,
+                linea,
+                "el movimiento de puntos"
+        );
     }
 
 
     /*
-     * Guarda que un estudiante ya recibió
-     * el punto por visualizar un objeto.
+     * Guarda que un estudiante ya recibió el punto por visualizar un objeto.
+     * Devuelve false si no se pudo escribir.
      */
-    private static void guardarVisualizacion(
+    private static boolean guardarVisualizacion(
             String clave) {
+
+        return anexarLinea(
+                ARCHIVO_VISUALIZACIONES,
+                clave,
+                "la visualizacion"
+        );
+    }
+
+
+    private static boolean anexarLinea(
+            Path archivo,
+            String linea,
+            String queGuarda) {
 
         try {
 
             Path carpeta =
-                    ARCHIVO_VISUALIZACIONES.getParent();
+                    archivo.getParent();
 
             if (carpeta != null) {
                 Files.createDirectories(carpeta);
@@ -410,22 +468,28 @@ public class PuntosService {
             try (
                     BufferedWriter escritor =
                             Files.newBufferedWriter(
-                                    ARCHIVO_VISUALIZACIONES,
-                                    java.nio.file.StandardOpenOption.CREATE,
-                                    java.nio.file.StandardOpenOption.APPEND
+                                    archivo,
+                                    StandardOpenOption.CREATE,
+                                    StandardOpenOption.APPEND
                             )
             ) {
 
-                escritor.write(clave);
+                escritor.write(linea);
                 escritor.newLine();
             }
+
+            return true;
 
         } catch (IOException e) {
 
             System.err.println(
-                    "No se pudo guardar la visualizacion: "
+                    "No se pudo guardar "
+                            + queGuarda
+                            + ": "
                             + e.getMessage()
             );
+
+            return false;
         }
     }
 
@@ -435,7 +499,7 @@ public class PuntosService {
 
         return correo
                 .trim()
-                .toLowerCase();
+                .toLowerCase(Locale.ROOT);
     }
 
 

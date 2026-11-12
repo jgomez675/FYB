@@ -1,87 +1,66 @@
-# FYB - Objetos perdidos (versión web)
+# FYB - Objetos perdidos
 
-La lógica sigue en **Java** (`src/back`) y ahora corre como servidor. La interfaz (`src/front`)
-es una página en HTML, CSS y JavaScript que habla con ese servidor. Mantiene la división
-back / front del proyecto original.
+Aplicación web para publicar y recuperar objetos perdidos entre estudiantes. El servidor es
+**Spring Boot** (Java 17) y la interfaz es HTML, CSS y JavaScript servidos desde
+`src/main/resources/static`.
 
 ## Cómo ejecutarlo
-Necesitas un **JDK 17 o superior** (no hay que descargar librerías).
+Necesitas **JDK 17 o superior** y **Maven**.
 
 - Linux / Mac: `./run.sh`
-- Windows: doble clic en `run.bat`
-- Con Maven: `mvn package` y luego `java -jar target/fyb.jar` (ejecútalo desde esta carpeta)
+- Windows: doble clic en `run.bat` (o `mvn spring-boot:run` en PowerShell)
+- Empaquetado: `mvn package` y luego `java -jar target/fyb.jar`
 
-Abre http://localhost:8080. Siempre se ejecuta desde esta carpeta, porque busca `data/` y `src/front/` desde aquí.
+Abre http://localhost:8080. Ejecútalo **siempre desde esta carpeta** (`objetos_perdidos`): la carpeta
+`data/` se busca desde donde arranca el servidor.
 
-## Cambiar el nombre de la app
-El nombre vive en un solo lugar: `src/back/config/AppConfig.java` (`NOMBRE`). El front lo pide al
-servidor al arrancar, así que el título de la pestaña, la cabecera y los textos cambian solos.
-También puedes cambiarlo sin tocar código con variables de entorno:
-
+## Configuración (variables de entorno)
 | Variable | Qué cambia | Por defecto |
 |---|---|---|
 | `FYB_NAME` | Nombre de la app | `FYB` |
 | `FYB_TAGLINE` | Eslogan | `Encuentra lo que creías perdido` |
 | `FYB_EMAIL_DOMAIN` | Dominio de correo permitido | `usa.edu.co` |
-| `PORT` | Puerto | `8080` |
-| `FYB_FRONT_DIR` | Carpeta del front | `src/front` |
+| `FYB_ADMIN_EMAIL` | Correo administrador | `admin@usa.edu.co` |
 | `FYB_COOKIE_SECURE` | `true` si la sirves por https | `false` |
+| `PORT` | Puerto | `8080` |
+| `FYB_DB_URL` / `FYB_DB_USER` / `FYB_DB_PASSWORD` | Base de datos | H2 en `data/fyb-db` |
+| `SPRING_MAIL_HOST`, `SPRING_MAIL_USERNAME`, ... | Envío del código de recuperación de contraseña | sin correo |
 
 ## Estructura
 ```
-src/
-├── Main.java                         arranca el servidor
-├── back/
-│   ├── config/AppConfig.java         nombre, eslogan, dominio, puerto
-│   ├── model/                        Usuario, ObjetoPerdido (sin cambios)
-│   ├── service/                      AuthService, ObjetoPerdidoService, FavoritosService, Archivos
-│   ├── validation/EmailValidator.java
-│   └── api/                          capa HTTP (ApiServer y ayudas)
-└── front/
-    ├── index.html, config.js, Main.js
-    ├── servicios/                    llamadas al servidor (ApiClient, AuthApi, ObjetosApi, FavoritosApi, PerfilApi)
-    ├── components/                   piezas compartidas (barra, tarjeta de objeto, botón de favorito...)
-    ├── login/  register/  objetos/   las pantallas
-    ├── favoritos/  perfil/           lista de favoritos y perfil
-    └── styles/styles.css
-data/                                 usuarios.txt, objetos.txt, favoritos.txt, objetos_ultimo_id.txt y fotos (se crean solos)
+src/main/java/back/
+├── FyBApplication.java      arranque de Spring Boot
+├── config/                  nombre, eslogan, dominio, admin
+├── model/                   Usuario, ObjetoPerdido, ReportePublicacion
+├── service/                 AuthService, ObjetoPerdidoService, PuntosService, ...
+├── controller/              API REST (/api/...)
+├── api/                     sesiones, errores, imágenes
+├── persistence/             base de datos (entidades, repositorios, sincronización)
+└── historial/               historial de puntos
+src/main/resources/
+├── application.properties   puerto y base de datos
+└── static/                  front (index.html, Main.js, vistas por carpeta)
+data/                        archivos de datos (usuarios, objetos, puntos, categorías)
 ```
 
-## API
-| Método y ruta | Qué hace | Sesión |
-|---|---|---|
-| `GET /api/config` | Nombre, eslogan y dominio | no |
-| `POST /api/registro` | Crea una cuenta | no |
-| `POST /api/login` | Inicia sesión (cookie) | no |
-| `POST /api/logout` | Cierra sesión | no |
-| `GET /api/sesion` | Usuario actual o `null` | no |
-| `GET /api/objetos` | Lista de objetos | sí |
-| `GET /api/objetos/{id}` | Detalle de un objeto (con el contacto vigente de quien lo publicó) | sí |
-| `POST /api/objetos` | Publica un objeto (foto en base64) | sí |
-| `DELETE /api/objetos/{id}` | Retira una publicación; solo quien la publicó (403 si no) | sí |
-| `GET /api/imagenes/{archivo}` | Foto de un objeto | sí |
-| `GET /api/favoritos` | Objetos favoritos de la persona, el último guardado primero | sí |
-| `PUT /api/favoritos/{id}` | Guarda un objeto en favoritos (repetirlo no da error) | sí |
-| `DELETE /api/favoritos/{id}` | Quita un objeto de favoritos | sí |
-| `GET /api/perfil` | Nombre, correo y teléfono de la cuenta | sí |
-| `PUT /api/perfil` | Actualiza nombre y teléfono (el correo no cambia) | sí |
+## Historias de usuario implementadas
+- **Perfil:** editar nombre y contraseña (`#/perfil`, `/api/perfil`).
+- **Base de datos:** usuarios, objetos, puntos y categorías también se guardan en una base de datos
+  (ver `README-BASE-DATOS.md`).
+- **Historial de puntos:** ver puntos ganados y gastados y cómo cambió el saldo
+  (`#/puntos/historial`, `/api/puntos/historial`; ver `README-HISTORIAL-PUNTOS.md`).
 
-Cada objeto de `/api/objetos` incluye `favorito` (si la persona lo guardó) y `propio` (si lo publicó ella).
+## Puntos: cómo se guardan
+- Cada movimiento es una línea de `data/puntos.txt`: `correo|cantidad|motivo|fecha`. Cantidad positiva =
+  ganado, negativa = gastado. El saldo es la suma de las líneas.
+- Al sumar o restar puntos **primero se escribe en el archivo y después se cambia el saldo en memoria**:
+  si el disco falla, el saldo no cambia y queda un aviso en la consola, así que nunca se desincronizan.
+- `PuntosService.descontarPuntos` ya existe para el canje de recompensas (valida que alcance el saldo);
+  todavía no hay pantalla que la use.
+- La devolución solo se confirma desde `/api/objetos/{id}/confirmar-devolucion` (la hace el dueño del
+  objeto). El antiguo `/validar-devolucion`, que daba 20 puntos a cualquiera sin confirmación, se eliminó.
+- Marcar un objeto como devuelto es atómico: dos confirmaciones simultáneas no pueden dar los puntos dos veces.
 
-## Qué cambió respecto a la versión de escritorio
-- Se quitaron las vistas JavaFX (`src/front/*.java`) y la dependencia de JavaFX del `pom.xml`. Siguen en el historial de Git.
-- `objetos.txt` mantiene su formato. `usuarios.txt` gana una cuarta columna, el teléfono (`nombre|correo|contraseña|teléfono`); los archivos de 3 columnas siguen funcionando y se completan solos al guardar.
-- **Contraseñas:** ahora se guardan con hash (PBKDF2). Las cuentas antiguas en texto plano siguen funcionando y se convierten solas la primera vez que inician sesión.
-- **Servidor:** las validaciones se repiten en Java (tamaños máximos, fecha válida, la foto se verifica por su contenido); el autor de cada objeto sale de la sesión; cinco intentos fallidos de inicio de sesión bloquean diez minutos.
-- Se añadió cerrar sesión, un buscador en la lista y un botón para contactar a quien publicó el objeto.
-
-## Favoritos, retirar publicaciones y perfil
-- **Favoritos:** el corazón de cada tarjeta (y el botón del detalle) guarda o quita el objeto de la lista personal; la pantalla `#/favoritos` los reúne. Se guardan en `data/favoritos.txt` (`correo|idObjeto`). Si se retira una publicación, desaparece de los favoritos de todos.
-- **Retirar una publicación:** solo quien la publicó ve el botón "Retirar publicación" en el detalle, y se pide confirmación porque no se puede deshacer. El servidor comprueba de nuevo que sea el autor, borra la foto y quita el objeto de los favoritos.
-- **Ids de objetos:** no se reutilizan al retirar publicaciones (el último id entregado queda en `data/objetos_ultimo_id.txt`). Así una foto en caché, un favorito o unos puntos de un objeto retirado nunca se pegan a uno nuevo.
-- **Perfil:** `#/perfil` permite cambiar el nombre y el teléfono de contacto (opcional, 7 a 15 dígitos). El correo no se puede cambiar: es el usuario de inicio de sesión y el que identifica las publicaciones. Los datos de contacto se muestran en el detalle de las publicaciones de esa persona.
-
-## Para publicarla en internet
-El servidor incluido habla HTTP simple. Ponle delante un proxy con HTTPS (Caddy, nginx...), que
-reenvíe la cabecera `X-Forwarded-Proto: https`, o arranca con `FYB_COOKIE_SECURE=true`.
-Las sesiones viven en memoria: al reiniciar el servidor, todos deben volver a iniciar sesión.
+## Datos privados
+`data/usuarios.txt`, `data/objetos.txt`, `data/objetos/*` y `data/fyb-db*` están en `.gitignore` y no
+deben subirse: contienen correos y contraseñas con hash.
