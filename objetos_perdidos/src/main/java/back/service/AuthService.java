@@ -59,8 +59,8 @@ public class AuthService {
                 }
 
                 String[] partes = linea.split("\\|", -1);
-                if (partes.length == 3) {
-                    usuarios.add(new Usuario(partes[0], partes[1], partes[2]));
+                if (partes.length >= 3) {
+                    usuarios.add(new Usuario(partes[0], partes[1], partes[2], partes.length >= 4 && "true".equalsIgnoreCase(partes[3])));
                 }
             }
         } catch (IOException e) {
@@ -72,7 +72,7 @@ public class AuthService {
     private static void guardarUsuarios() throws IOException {
         List<String> lineas = new ArrayList<>();
         for (Usuario usuario : usuarios) {
-            lineas.add(usuario.getNombre() + "|" + usuario.getCorreo() + "|" + usuario.getContraseña());
+            lineas.add(usuario.getNombre() + "|" + usuario.getCorreo() + "|" + usuario.getContraseña() + "|" + usuario.isBloqueado());
         }
         Archivos.escribirLineas(ARCHIVO_USUARIOS, lineas);
     }
@@ -145,6 +145,10 @@ public class AuthService {
             return null;
         }
 
+        if (usuario.isBloqueado()) {
+            return null;
+        }
+
         String guardada = usuario.getContraseña();
 
         if (guardada.startsWith(PREFIJO_HASH)) {
@@ -202,7 +206,7 @@ public class AuthService {
                     continue;
                 }
 
-                usuarios.set(i, new Usuario(actual.getNombre(), actual.getCorreo(), guardada));
+                usuarios.set(i, new Usuario(actual.getNombre(), actual.getCorreo(), guardada, actual.isBloqueado()));
 
                 try {
                     guardarUsuarios();
@@ -287,7 +291,7 @@ public class AuthService {
                     continue;
                 }
 
-                usuarios.set(i, new Usuario(nombre, actual.getCorreo(), guardada));
+                usuarios.set(i, new Usuario(nombre, actual.getCorreo(), guardada, actual.isBloqueado()));
 
                 try {
                     guardarUsuarios();
@@ -304,6 +308,10 @@ public class AuthService {
     }
 
     private static boolean contraseñaCoincide(Usuario usuario, String contraseña) {
+        if (usuario.isBloqueado()) {
+            return false;
+        }
+
         String guardada = usuario.getContraseña();
 
         if (guardada.startsWith(PREFIJO_HASH)) {
@@ -315,6 +323,34 @@ public class AuthService {
                 guardada.getBytes(StandardCharsets.UTF_8),
                 contraseña.getBytes(StandardCharsets.UTF_8)
         );
+    }
+
+
+    /** Lista de usuarios para el panel administrativo; nunca expone contraseñas. */
+    public static List<Usuario> listarUsuarios() {
+        synchronized (usuarios) {
+            return new ArrayList<>(usuarios);
+        }
+    }
+
+    /** Bloquea o desbloquea una cuenta y conserva el cambio en disco. */
+    public static boolean establecerBloqueo(String correo, boolean bloqueado) {
+        synchronized (usuarios) {
+            for (Usuario usuario : usuarios) {
+                if (usuario.getCorreo().equalsIgnoreCase(correo)) {
+                    boolean anterior = usuario.isBloqueado();
+                    usuario.setBloqueado(bloqueado);
+                    try {
+                        guardarUsuarios();
+                        return true;
+                    } catch (IOException e) {
+                        usuario.setBloqueado(anterior);
+                        return false;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private static Usuario buscarPorCorreo(String correo) {
@@ -337,7 +373,7 @@ public class AuthService {
                 return;
             }
 
-            usuarios.set(posicion, new Usuario(antiguo.getNombre(), antiguo.getCorreo(), guardada));
+            usuarios.set(posicion, new Usuario(antiguo.getNombre(), antiguo.getCorreo(), guardada, antiguo.isBloqueado()));
 
             try {
                 guardarUsuarios();
