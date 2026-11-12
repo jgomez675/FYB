@@ -34,7 +34,7 @@ public class ReportePublicacionService {
                 if (linea.isBlank()) continue;
 
                 String[] partes = linea.split("\\|", -1);
-                if (partes.length != 6) continue;
+                if (partes.length < 6) continue;
 
                 try {
                     reportes.add(new ReportePublicacion(
@@ -43,7 +43,8 @@ public class ReportePublicacionService {
                             partes[2],
                             partes[3],
                             partes[4],
-                            partes[5]
+                            partes[5],
+                            partes.length >= 7 ? partes[6] : "PENDIENTE"
                     ));
                 } catch (NumberFormatException ignored) {
                 }
@@ -100,7 +101,8 @@ public class ReportePublicacionService {
                         reporte.getCorreoUsuario() + "|" +
                         reporte.getMotivo() + "|" +
                         reporte.getDetalle() + "|" +
-                        reporte.getFecha()
+                        reporte.getFecha() + "|" +
+                        reporte.getEstado()
                 );
                 escritor.newLine();
             }
@@ -113,6 +115,35 @@ public class ReportePublicacionService {
             if (reporte.getId() > mayor) mayor = reporte.getId();
         }
         return mayor + 1;
+    }
+
+
+    public static synchronized List<ReportePublicacion> listarReportes() {
+        return new ArrayList<>(reportes);
+    }
+
+    public static synchronized boolean resolverReporte(int id, String decision) {
+        if (!"OCULTAR".equals(decision) && !"DESCARTAR".equals(decision)) return false;
+        for (ReportePublicacion reporte : reportes) {
+            if (reporte.getId() == id) {
+                String anterior = reporte.getEstado();
+                reporte.setEstado(decision);
+                try {
+                    if ("OCULTAR".equals(decision)) {
+                        if (!ObjetoPerdidoService.ocultarObjetoPorModeracion(reporte.getObjetoId())) {
+                            reporte.setEstado(anterior);
+                            return false;
+                        }
+                    }
+                    guardarReportes();
+                    return true;
+                } catch (IOException e) {
+                    reporte.setEstado(anterior);
+                    return false;
+                }
+            }
+        }
+        return false;
     }
 
     private static String limpiar(String texto) {
