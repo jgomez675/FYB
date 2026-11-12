@@ -15,6 +15,7 @@ public class ObjetoPerdido {
     private String estado;
     private String correoEstudianteDevuelve;
     private String correoDescubridor;
+    private boolean oculto;
 
     public ObjetoPerdido(
             int id,
@@ -66,6 +67,7 @@ public class ObjetoPerdido {
         this.estado = "PERDIDO";
         this.correoEstudianteDevuelve = "";
         this.correoDescubridor = "";
+        this.oculto = false;
     }
 
         public ObjetoPerdido(
@@ -101,6 +103,7 @@ public class ObjetoPerdido {
 
         this.correoEstudianteDevuelve = "";
         this.correoDescubridor = "";
+        this.oculto = false;
     }
 
     public int getId() {
@@ -151,6 +154,9 @@ public class ObjetoPerdido {
         return correoDescubridor;
     }
 
+    public boolean isOculto() { return oculto; }
+    public void setOculto(boolean oculto) { this.oculto = oculto; }
+
     public void registrarDescubridor(String correoDescubridor) {
         this.correoDescubridor = correoDescubridor;
     }
@@ -169,4 +175,3 @@ public class ObjetoPerdido {
     public boolean estaDevuelto() {
         return "DEVUELTO".equalsIgnoreCase(estado);
     }
-}
