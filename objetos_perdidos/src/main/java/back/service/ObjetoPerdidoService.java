@@ -190,6 +190,10 @@ public class ObjetoPerdidoService {
                                                 : partes[9]
                                 );
 
+                        if (partes.length >= 13) {
+                            objeto.setOculto("true".equalsIgnoreCase(partes[12]));
+                        }
+
                         if ("DEVUELTO".equalsIgnoreCase(partes[9])) {
                             objeto.marcarComoDevuelto(
                                     partes[10]
@@ -450,6 +454,22 @@ public class ObjetoPerdidoService {
         }
     }
 
+
+    /** Oculta una publicación sin borrar su historial ni sus datos. */
+    public static synchronized boolean ocultarObjetoPorModeracion(int id) {
+        ObjetoPerdido objeto = obtenerObjeto(id);
+        if (objeto == null) return false;
+        boolean anterior = objeto.isOculto();
+        objeto.setOculto(true);
+        try {
+            guardarObjetos();
+            return true;
+        } catch (IOException e) {
+            objeto.setOculto(anterior);
+            return false;
+        }
+    }
+
     private static void guardarObjetos()
             throws IOException {
 
@@ -478,7 +498,8 @@ public class ObjetoPerdidoService {
                         objeto.getCategoria() + "|" +
                         objeto.getEstado() + "|" +
                         objeto.getCorreoEstudianteDevuelve() + "|" +
-                        objeto.getCorreoDescubridor()
+                        objeto.getCorreoDescubridor() + "|" +
+                        objeto.isOculto()
                 );
 
                 escritor.newLine();
