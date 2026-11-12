@@ -398,7 +398,11 @@ public class ObjetoPerdidoService {
         }
     }
 
-    public static boolean marcarComoDevuelto(
+    /*
+     * synchronized: la revisión "¿ya estaba devuelto?" y la marca van juntas, así dos
+     * confirmaciones al mismo tiempo no pueden dar los puntos dos veces.
+     */
+    public static synchronized boolean marcarComoDevuelto(
             int id,
             String correoEstudiante) {
 
@@ -413,6 +417,12 @@ public class ObjetoPerdidoService {
             return false;
         }
 
+        String estadoAnterior =
+                objeto.getEstado();
+
+        String devolvioAnterior =
+                objeto.getCorreoEstudianteDevuelve();
+
         objeto.marcarComoDevuelto(
                 correoEstudiante
         );
@@ -424,6 +434,12 @@ public class ObjetoPerdidoService {
             return true;
 
         } catch (IOException e) {
+
+            // No quedó guardado: se deja como estaba para que memoria y archivo coincidan.
+            objeto.restaurarEstado(
+                    estadoAnterior,
+                    devolvioAnterior
+            );
 
             System.err.println(
                     "No se pudo guardar la devolución: "

@@ -7,3 +7,6 @@ data/usuarios.txt
 data/objetos.txt
 data/objetos/*
 !data/objetos/prueba.txt
+
+# Base de datos local (contiene usuarios y contraseñas con hash: no subir)
+data/fyb-db*
