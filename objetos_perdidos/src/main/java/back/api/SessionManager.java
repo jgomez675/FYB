@@ -59,6 +59,13 @@ public final class SessionManager {
         sesiones.values().removeIf(s -> s.correo().equalsIgnoreCase(correo));
     }
 
+    /** Cierra todas las sesiones excepto las de la cuenta administrativa indicada. */
+    public static void cerrarTodasExcepto(String correoConservar) {
+        if (correoConservar == null) return;
+        sesiones.entrySet().removeIf(e ->
+                !e.getValue().correo().equalsIgnoreCase(correoConservar));
+    }
+
     /** Actualiza el nombre guardado en las sesiones abiertas de una cuenta (al editar el perfil). */
     public static void actualizarNombre(String correo, String nombre) {
         if (correo == null) return;

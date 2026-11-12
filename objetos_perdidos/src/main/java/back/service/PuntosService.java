@@ -62,6 +62,54 @@ public class PuntosService {
     public static final int PUNTOS_TECNOLOGIA = 200;
 
 
+    /** Elimina movimientos y visualizaciones de todos los correos excepto el administrador. */
+    public static synchronized boolean limpiarDatosUsuariosExcepto(String correoConservar) {
+        if (correoConservar == null || correoConservar.isBlank()) return false;
+        String admin = normalizarCorreo(correoConservar);
+        try {
+            java.util.List<String> movimientosConservados = new java.util.ArrayList<>();
+            if (Files.exists(ARCHIVO_PUNTOS)) {
+                for (String linea : Files.readAllLines(ARCHIVO_PUNTOS)) {
+                    if (linea.isBlank()) continue;
+                    String[] partes = linea.split("\\|", -1);
+                    if (partes.length > 0 && normalizarCorreo(partes[0]).equals(admin)) {
+                        movimientosConservados.add(linea);
+                    }
+                }
+            }
+
+            java.util.List<String> visualizacionesConservadas = new java.util.ArrayList<>();
+            if (Files.exists(ARCHIVO_VISUALIZACIONES)) {
+                for (String linea : Files.readAllLines(ARCHIVO_VISUALIZACIONES)) {
+                    if (linea.isBlank()) continue;
+                    String[] partes = linea.split("\\|", -1);
+                    if (partes.length > 0 && normalizarCorreo(partes[0]).equals(admin)) {
+                        visualizacionesConservadas.add(linea);
+                    }
+                }
+            }
+
+            Archivos.escribirLineas(ARCHIVO_PUNTOS, movimientosConservados);
+            Archivos.escribirLineas(ARCHIVO_VISUALIZACIONES, visualizacionesConservadas);
+
+            puntos.clear();
+            for (String linea : movimientosConservados) {
+                String[] partes = linea.split("\\|", -1);
+                if (partes.length >= 2) {
+                    try {
+                        puntos.put(admin, puntos.getOrDefault(admin, 0) + Integer.parseInt(partes[1].trim()));
+                    } catch (NumberFormatException ignored) { }
+                }
+            }
+            visualizacionesConPuntos.clear();
+            visualizacionesConPuntos.addAll(visualizacionesConservadas);
+            return true;
+        } catch (IOException e) {
+            System.err.println("No se pudieron limpiar los puntos de los usuarios: " + e.getMessage());
+            return false;
+        }
+    }
+
     /*
      * Consulta el saldo actual de un estudiante.
      */

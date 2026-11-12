@@ -1,6 +1,6 @@
-*
+﻿/*
  * Piezas de pantalla que se repiten: el logo, la tarjeta de acceso, la barra superior
- * con la sesión y la foto de un objeto.
+ * con la sesiÃ³n y la foto de un objeto.
  */
 (function (App) {
   "use strict";
@@ -32,7 +32,7 @@
     );
   }
 
-  // Pantalla con sesión iniciada: barra superior + contenido.
+  // Pantalla con sesiÃ³n iniciada: barra superior + contenido.
   function pantalla(usuario, ...contenido) {
 
     const cerrarSesion = async () => {

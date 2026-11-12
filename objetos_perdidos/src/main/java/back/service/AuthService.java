@@ -333,6 +333,41 @@ public class AuthService {
         }
     }
 
+    /** Elimina todas las cuentas excepto la cuenta administrativa indicada.
+     *  Primero persiste el archivo filtrado y solo después actualiza la memoria.
+     *  Devuelve la cantidad eliminada o -1 si no se pudo completar.
+     */
+    public static int eliminarUsuariosExcepto(String correoConservar) {
+        if (correoConservar == null || correoConservar.isBlank()) return -1;
+        synchronized (usuarios) {
+            List<Usuario> conservados = new ArrayList<>();
+            boolean existeAdmin = false;
+            int eliminados = 0;
+            for (Usuario usuario : usuarios) {
+                if (usuario.getCorreo().equalsIgnoreCase(correoConservar)) {
+                    conservados.add(usuario);
+                    existeAdmin = true;
+                } else {
+                    eliminados++;
+                }
+            }
+            if (!existeAdmin) return -1;
+            List<String> lineas = new ArrayList<>();
+            for (Usuario usuario : conservados) {
+                lineas.add(usuario.getNombre() + "|" + usuario.getCorreo() + "|" + usuario.getContraseña() + "|" + usuario.isBloqueado());
+            }
+            try {
+                Archivos.escribirLineas(ARCHIVO_USUARIOS, lineas);
+                usuarios.clear();
+                usuarios.addAll(conservados);
+                return eliminados;
+            } catch (IOException e) {
+                System.err.println("No se pudieron eliminar las cuentas: " + e.getMessage());
+                return -1;
+            }
+        }
+    }
+
     /** Bloquea o desbloquea una cuenta y conserva el cambio en disco. */
     public static boolean establecerBloqueo(String correo, boolean bloqueado) {
         synchronized (usuarios) {

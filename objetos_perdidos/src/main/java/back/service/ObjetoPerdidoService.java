@@ -455,6 +455,79 @@ public class ObjetoPerdidoService {
     }
 
 
+    /**
+     * Elimina una publicación de los datos activos. La imagen asociada también se elimina
+     * cuando está dentro de la carpeta administrada por FYB.
+     */
+    public static synchronized boolean eliminarObjetoPorAdmin(int id) {
+        ObjetoPerdido objeto = obtenerObjeto(id);
+        if (objeto == null) {
+            return false;
+        }
+
+        int posicion = objetos.indexOf(objeto);
+        objetos.remove(objeto);
+        try {
+            guardarObjetos();
+        } catch (IOException e) {
+            objetos.add(posicion, objeto);
+            System.err.println("No se pudo guardar la eliminación del objeto " + id + ": " + e.getMessage());
+            return false;
+        }
+
+        try {
+            String imagen = objeto.getImagen();
+            if (imagen != null && !imagen.isBlank()) {
+                Path carpeta = CARPETA_IMAGENES.toAbsolutePath().normalize();
+                Path archivo = Paths.get(imagen).toAbsolutePath().normalize();
+                if (archivo.startsWith(carpeta)) {
+                    Files.deleteIfExists(archivo);
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            // La publicación ya fue retirada; un fallo al borrar la imagen no debe restaurarla.
+            System.err.println("No se pudo borrar la imagen del objeto " + id + ": " + e.getMessage());
+        }
+        return true;
+    }
+
+    /**
+     * Elimina todas las publicaciones para tareas de limpieza administrativa.
+     * Primero persiste el archivo vacío; si falla, restaura la lista en memoria.
+     * Devuelve la cantidad eliminada, o -1 si no se pudo guardar el cambio.
+     */
+    public static synchronized int eliminarTodosLosObjetosPorAdmin() {
+        List<ObjetoPerdido> respaldo = new ArrayList<>(objetos);
+        if (respaldo.isEmpty()) {
+            return 0;
+        }
+
+        objetos.clear();
+        try {
+            guardarObjetos();
+        } catch (IOException e) {
+            objetos.addAll(respaldo);
+            System.err.println("No se pudieron eliminar todas las publicaciones: " + e.getMessage());
+            return -1;
+        }
+
+        // Solo se borran imágenes ubicadas dentro de la carpeta administrada por FYB.
+        Path carpeta = CARPETA_IMAGENES.toAbsolutePath().normalize();
+        for (ObjetoPerdido objeto : respaldo) {
+            try {
+                String imagen = objeto.getImagen();
+                if (imagen == null || imagen.isBlank()) continue;
+                Path archivo = Paths.get(imagen).toAbsolutePath().normalize();
+                if (archivo.startsWith(carpeta)) {
+                    Files.deleteIfExists(archivo);
+                }
+            } catch (IOException | RuntimeException e) {
+                System.err.println("No se pudo borrar una imagen de la limpieza administrativa: " + e.getMessage());
+            }
+        }
+        return respaldo.size();
+    }
+
     /** Oculta una publicación sin borrar su historial ni sus datos. */
     public static synchronized boolean ocultarObjetoPorModeracion(int id) {
         ObjetoPerdido objeto = obtenerObjeto(id);

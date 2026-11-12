@@ -76,17 +76,52 @@
       filtroEstado.addEventListener("change", pintar);
       pintar();
 
+      const perdidos = objetos.filter((o) => o.estado === "Perdido").length;
+      const encontrados = objetos.filter((o) => o.estado === "Encontrado").length;
+
+      const portada = h("section", { class: "fyb-hero" },
+        h("div", { class: "fyb-hero-copy" },
+          h("span", { class: "fyb-eyebrow" }, "CONECTAMOS PERSONAS CON LO QUE IMPORTA"),
+          h("h1", {}, "Un objeto puede volver a encontrar su dueño."),
+          h("p", { class: "fyb-hero-lede" }, "Explora los reportes de la comunidad universitaria o publica lo que perdiste o encontraste. Entre todos hacemos que vuelva a casa."),
+          h("div", { class: "fyb-hero-actions" },
+            h("a", { class: "btn btn-primary", href: "#/publicar" }, "＋  Reportar un objeto"),
+            h("a", { class: "btn fyb-btn-outline", href: "#/mis-publicaciones" }, "Mis publicaciones")
+          )
+        ),
+        h("div", { class: "fyb-hero-orbit", "aria-hidden": "true" },
+          h("div", { class: "fyb-orbit-ring fyb-ring-one" }),
+          h("div", { class: "fyb-orbit-ring fyb-ring-two" }),
+          h("div", { class: "fyb-orbit-core" },
+            h("span", { class: "fyb-orbit-symbol" }, "⌕"),
+            h("span", { class: "fyb-orbit-label" }, "FYB")
+          ),
+          h("span", { class: "fyb-orbit-dot fyb-dot-one" }),
+          h("span", { class: "fyb-orbit-dot fyb-dot-two" }),
+          h("span", { class: "fyb-orbit-dot fyb-dot-three" })
+        ),
+        h("div", { class: "fyb-hero-stats" },
+          h("div", { class: "fyb-stat" }, h("strong", {}, String(objetos.length)), h("span", {}, "Publicaciones")),
+          h("div", { class: "fyb-stat" }, h("strong", {}, String(perdidos)), h("span", {}, "Reportados como perdidos")),
+          h("div", { class: "fyb-stat" }, h("strong", {}, String(encontrados)), h("span", {}, "Encontrados"))
+        )
+      );
+
+      const encabezadoListado = h("div", { class: "fyb-section-heading" },
+        h("div", {},
+          h("span", { class: "fyb-eyebrow fyb-eyebrow-muted" }, "COMUNIDAD FYB"),
+          h("h2", {}, "Explorar publicaciones"),
+          h("p", {}, "Encuentra coincidencias usando el buscador y los filtros.")
+        ),
+        estado
+      );
+
       return pantalla(
         usuario,
         tomarAviso(),
-        h("div", { class: "page-head" },
-          h("div", {},
-            h("h1", {}, "Objetos publicados"),
-            h("p", { class: "lede" }, "Busca objetos, revisa sus fotos y filtra por categoría o estado.")
-          ),
-          h("a", { class: "btn btn-primary", href: "#/publicar" }, "Publicar objeto")
-        ),
-        objetos.length ? h("div", { class: "toolbar" }, buscar, categoria, filtroEstado, estado) : null,
+        portada,
+        encabezadoListado,
+        objetos.length ? h("div", { class: "toolbar fyb-toolbar" }, buscar, categoria, filtroEstado) : null,
         lista
       );
     }

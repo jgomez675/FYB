@@ -8,6 +8,11 @@ import back.model.Usuario;
 import back.service.AuthService;
 import back.service.ObjetoPerdidoService;
 import back.service.ReportePublicacionService;
+import back.persistence.repository.ObjetoRepository;
+import back.persistence.repository.UsuarioRepository;
+import back.persistence.repository.MovimientoPuntosRepository;
+import back.service.PuntosService;
+import org.springframework.transaction.annotation.Transactional;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +22,18 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
+
+    private final ObjetoRepository objetoRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final MovimientoPuntosRepository movimientoPuntosRepository;
+
+    public AdminController(ObjetoRepository objetoRepository,
+                           UsuarioRepository usuarioRepository,
+                           MovimientoPuntosRepository movimientoPuntosRepository) {
+        this.objetoRepository = objetoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.movimientoPuntosRepository = movimientoPuntosRepository;
+    }
 
     @GetMapping("/resumen")
     public Map<String,Object> resumen(HttpServletRequest request) {
@@ -29,6 +46,73 @@ public class AdminController {
                 .filter(r -> "PENDIENTE".equalsIgnoreCase(r.getEstado())).count();
         return Map.of("totalObjetos", visibles, "encontrados", encontrados,
                 "devueltos", devueltos, "reportesPendientes", reportesPendientes);
+    }
+
+    /** Lista todas las publicaciones para moderación, incluidas las ocultas. */
+    @GetMapping("/objetos")
+    public Map<String,Object> objetos(
+            @RequestParam(required = false) String categoria,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String q,
+            HttpServletRequest request) {
+        requerirAdmin(request);
+
+        String categoriaFiltro = limpiarFiltro(categoria);
+        String estadoFiltro = limpiarFiltro(estado);
+        String textoFiltro = limpiarFiltro(q).toLowerCase(Locale.ROOT);
+
+        List<Map<String,Object>> salida = new ArrayList<>();
+        for (ObjetoPerdido objeto : ObjetoPerdidoService.obtenerObjetos()) {
+            if (!categoriaFiltro.isEmpty() && !categoriaFiltro.equalsIgnoreCase(objeto.getCategoria())) continue;
+            if (!estadoFiltro.isEmpty() && !estadoFiltro.equalsIgnoreCase(objeto.getEstado())) continue;
+
+            String contenido = String.join(" ",
+                    valor(objeto.getNombre()),
+                    valor(objeto.getDescripcion()),
+                    valor(objeto.getLugar()),
+                    valor(objeto.getCorreoUsuario()),
+                    valor(objeto.getCategoria()),
+                    valor(objeto.getEstado()));
+            if (!textoFiltro.isEmpty() && !contenido.toLowerCase(Locale.ROOT).contains(textoFiltro)) continue;
+
+            Map<String,Object> fila = new LinkedHashMap<>();
+            fila.put("id", objeto.getId());
+            fila.put("nombre", objeto.getNombre());
+            fila.put("descripcion", objeto.getDescripcion());
+            fila.put("lugar", objeto.getLugar());
+            fila.put("fecha", objeto.getFecha());
+            fila.put("imagenUrl", imagenUrl(objeto.getImagen()));
+            fila.put("correoUsuario", objeto.getCorreoUsuario());
+            fila.put("categoria", objeto.getCategoria());
+            fila.put("estado", objeto.getEstado());
+            fila.put("oculto", objeto.isOculto());
+            salida.add(fila);
+        }
+        return Map.of("objetos", salida, "total", salida.size());
+    }
+
+    /** Eliminación masiva protegida por el rol administrador. */
+    @DeleteMapping("/objetos/todos")
+    public Map<String,Object> eliminarTodasLasPublicaciones(HttpServletRequest request) {
+        requerirAdmin(request);
+        int eliminados = ObjetoPerdidoService.eliminarTodosLosObjetosPorAdmin();
+        if (eliminados < 0) {
+            throw new RuntimeException("No se pudieron eliminar las publicaciones. No se guardaron los cambios.");
+        }
+        objetoRepository.deleteAllInBatch();
+        return Map.of("ok", true, "eliminados", eliminados,
+                "mensaje", "Se eliminaron " + eliminados + " publicaciones.");
+    }
+
+    /** Eliminación definitiva protegida por el rol administrador. */
+    @DeleteMapping("/objetos/{id}")
+    public Map<String,Object> eliminarObjeto(@PathVariable int id, HttpServletRequest request) {
+        requerirAdmin(request);
+        if (!ObjetoPerdidoService.eliminarObjetoPorAdmin(id)) {
+            throw new RuntimeException("No se encontró el objeto o no se pudo guardar su eliminación.");
+        }
+        objetoRepository.deleteById(id);
+        return Map.of("ok", true, "mensaje", "La publicación fue eliminada.");
     }
 
     @GetMapping("/reportes")
@@ -66,6 +150,34 @@ public class AdminController {
         return Map.of("usuarios", salida);
     }
 
+    /** Elimina todas las cuentas estudiantiles, sus puntos y sesiones; conserva al administrador. */
+    @DeleteMapping("/usuarios/todos-excepto-admin")
+    @Transactional
+    public Map<String,Object> eliminarTodasLasCuentasExceptoAdmin(HttpServletRequest request) {
+        SessionManager.Sesion admin = requerirAdmin(request);
+        String correoAdmin = AppConfig.CORREO_ADMIN;
+
+        // No se permite continuar si falta la cuenta que debe conservar el acceso administrativo.
+        if (AuthService.buscarUsuario(correoAdmin) == null) {
+            throw new RuntimeException("No se encontró la cuenta administradora. No se eliminó ninguna cuenta.");
+        }
+        if (!PuntosService.limpiarDatosUsuariosExcepto(correoAdmin)) {
+            throw new RuntimeException("No se pudieron limpiar los puntos. No se eliminaron las cuentas.");
+        }
+        int eliminados = AuthService.eliminarUsuariosExcepto(correoAdmin);
+        if (eliminados < 0) {
+            throw new RuntimeException("No se pudieron guardar los cambios de usuarios.");
+        }
+
+        movimientoPuntosRepository.eliminarTodosExcepto(correoAdmin);
+        usuarioRepository.eliminarTodosExcepto(correoAdmin);
+        SessionManager.cerrarTodasExcepto(correoAdmin);
+
+        return Map.of("ok", true, "eliminados", eliminados,
+                "correoConservado", correoAdmin,
+                "mensaje", "Se eliminaron " + eliminados + " cuentas. La cuenta administradora se conservó.");
+    }
+
     @PostMapping("/usuarios/bloqueo")
     public Map<String,Object> bloqueo(@RequestBody Map<String,Object> body, HttpServletRequest request) {
         SessionManager.Sesion admin = requerirAdmin(request);
@@ -77,6 +189,22 @@ public class AdminController {
         if (!AuthService.establecerBloqueo(correo, bloquear)) throw new RuntimeException("No se pudo guardar el cambio.");
         if (bloquear) SessionManager.cerrarTodas(correo);
         return Map.of("ok", true, "mensaje", bloquear ? "Cuenta bloqueada." : "Cuenta desbloqueada.");
+    }
+
+    private static String limpiarFiltro(String valor) {
+        return valor == null ? "" : valor.trim();
+    }
+
+    private static String valor(String valor) {
+        return valor == null ? "" : valor;
+    }
+
+    private static String imagenUrl(String imagen) {
+        if (imagen == null || imagen.isBlank()) return "";
+        String archivo = imagen.replace('\\', '/');
+        archivo = archivo.substring(archivo.lastIndexOf('/') + 1);
+        return archivo.matches("objeto_\\d+\\.(jpg|jpeg|png|gif|webp)")
+                ? "/api/imagenes/" + archivo : "";
     }
 
     private SessionManager.Sesion requerirAdmin(HttpServletRequest request) {

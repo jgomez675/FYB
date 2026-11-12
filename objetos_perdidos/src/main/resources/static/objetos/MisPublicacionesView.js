@@ -33,8 +33,11 @@
 
         if (!objetos.length) {
           resumen.textContent = "";
-          lista.append(h("div", { class: "empty" },
-            h("p", {}, "Aún no has publicado ningún objeto."),
+          lista.append(h("div", { class: "empty fyb-empty-state" },
+            h("div", { class: "fyb-empty-icon", "aria-hidden": "true" }, "⌕"),
+            h("span", { class: "fyb-eyebrow fyb-eyebrow-muted" }, "TU ESPACIO FYB"),
+            h("h2", {}, "Aquí comenzará tu historial."),
+            h("p", {}, "Cuando publiques un objeto perdido o encontrado, podrás seguir su estado desde esta sección."),
             h("a", { class: "btn btn-primary", href: "#/publicar" }, "Publicar mi primer objeto")
           ));
           return;
@@ -67,14 +70,15 @@
       return pantalla(
         usuario,
         tomarAviso(),
-        h("div", { class: "page-head" },
+        h("section", { class: "fyb-subhero" },
           h("div", {},
+            h("span", { class: "fyb-eyebrow" }, "PANEL PERSONAL"),
             h("h1", {}, "Mis publicaciones"),
             h("p", { class: "lede" }, "Todos los objetos que has reportado, con su estado actual.")
           ),
-          h("a", { class: "btn btn-primary", href: "#/publicar" }, "Publicar objeto")
+          h("a", { class: "btn btn-primary", href: "#/publicar" }, "＋  Publicar objeto")
         ),
-        objetos.length ? h("div", { class: "toolbar" }, buscar, filtroEstado, resumen) : null,
+        objetos.length ? h("div", { class: "toolbar fyb-toolbar" }, buscar, filtroEstado, resumen) : null,
         lista
       );
     }

@@ -175,3 +175,4 @@ public class ObjetoPerdido {
     public boolean estaDevuelto() {
         return "DEVUELTO".equalsIgnoreCase(estado);
     }
+}
