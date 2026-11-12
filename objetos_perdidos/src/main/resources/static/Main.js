@@ -29,6 +29,7 @@
 
   const { PuntosView, HistorialPuntosView } = App.front.puntos;
   const { PerfilView } = App.front.perfil;
+  const { AdminView } = App.front.admin;
 
   const rutas = [
     {
@@ -80,6 +81,11 @@
       patron: /^#\/perfil$/,
       requiereSesion: true,
       vista: PerfilView
+    },
+    {
+      patron: /^#\/admin$/,
+      requiereSesion: true,
+      vista: AdminView
     }
   ];
 
