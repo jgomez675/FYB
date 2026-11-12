@@ -10,3 +10,6 @@ data/objetos/*
 
 # Base de datos local (contiene usuarios y contraseñas con hash: no subir)
 data/fyb-db*
+
+# Canjes de recompensas (correos de estudiantes: no subir)
+data/canjes.txt
