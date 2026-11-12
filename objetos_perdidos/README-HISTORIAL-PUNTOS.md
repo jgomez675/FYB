@@ -19,6 +19,5 @@ Lee `data/puntos.txt` (lo que ya escribe `PuntosService`), sin modificarlo. Un m
 "ganado" y uno negativo es "gastado". El saldo coincide con el de "Mis puntos".
 
 ## Nota
-Hoy la app no tiene una pantalla que reste puntos (el botón "Canjear recompensa" aún no hace nada), así que
-por ahora solo aparecerán movimientos ganados. `PuntosService.descontarPuntos` ya está lista: cuando el canje
-la use, el gasto queda guardado en `puntos.txt` con cantidad negativa y el historial lo mostrará solo.
+El canje de recompensas (`README-RECOMPENSAS.md`) usa `PuntosService.descontarPuntos`: cada canje queda en `puntos.txt`
+con cantidad negativa y el historial lo muestra como gasto.

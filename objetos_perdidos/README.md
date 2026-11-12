@@ -36,7 +36,8 @@ src/main/java/back/
 ├── controller/              API REST (/api/...)
 ├── api/                     sesiones, errores, imágenes
 ├── persistence/             base de datos (entidades, repositorios, sincronización)
-└── historial/               historial de puntos
+├── historial/               historial de puntos
+└── recompensas/             canje de puntos por recompensas
 src/main/resources/
 ├── application.properties   puerto y base de datos
 └── static/                  front (index.html, Main.js, vistas por carpeta)
@@ -49,14 +50,16 @@ data/                        archivos de datos (usuarios, objetos, puntos, categ
   (ver `README-BASE-DATOS.md`).
 - **Historial de puntos:** ver puntos ganados y gastados y cómo cambió el saldo
   (`#/puntos/historial`, `/api/puntos/historial`; ver `README-HISTORIAL-PUNTOS.md`).
+- **Canje de recompensas:** canjear puntos por recompensas cuando el saldo alcanza, con código para reclamar
+  (`#/puntos`, `/api/recompensas`; ver `README-RECOMPENSAS.md`).
 
 ## Puntos: cómo se guardan
 - Cada movimiento es una línea de `data/puntos.txt`: `correo|cantidad|motivo|fecha`. Cantidad positiva =
   ganado, negativa = gastado. El saldo es la suma de las líneas.
 - Al sumar o restar puntos **primero se escribe en el archivo y después se cambia el saldo en memoria**:
   si el disco falla, el saldo no cambia y queda un aviso en la consola, así que nunca se desincronizan.
-- `PuntosService.descontarPuntos` ya existe para el canje de recompensas (valida que alcance el saldo);
-  todavía no hay pantalla que la use.
+- `PuntosService.descontarPuntos` descuenta puntos (valida que alcance el saldo) y la usa el canje de
+  recompensas (`back/recompensas`).
 - La devolución solo se confirma desde `/api/objetos/{id}/confirmar-devolucion` (la hace el dueño del
   objeto). El antiguo `/validar-devolucion`, que daba 20 puntos a cualquiera sin confirmación, se eliminó.
 - Marcar un objeto como devuelto es atómico: dos confirmaciones simultáneas no pueden dar los puntos dos veces.
