@@ -37,7 +37,9 @@ public class ObjetosController {
         List<Object> lista = new ArrayList<>();
 
         for (ObjetoPerdido objeto : objetos) {
-            lista.add(objetoJson(objeto));
+            if (!objeto.isOculto()) {
+                lista.add(objetoJson(objeto));
+            }
         }
 
         return Map.of("objetos", lista);
@@ -96,7 +98,7 @@ public class ObjetosController {
         ObjetoPerdido objeto =
                 ObjetoPerdidoService.obtenerObjeto(id);
 
-        if (objeto == null) {
+        if (objeto == null || objeto.isOculto()) {
             throw new RuntimeException(
                     "No encontramos este objeto."
             );
