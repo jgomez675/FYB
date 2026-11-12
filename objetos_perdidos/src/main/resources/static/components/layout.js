@@ -1,4 +1,4 @@
-/*
+*
  * Piezas de pantalla que se repiten: el logo, la tarjeta de acceso, la barra superior
  * con la sesión y la foto de un objeto.
  */
@@ -102,6 +102,10 @@
             },
             "Mi perfil"
           ),
+
+          ...(usuario.correo && usuario.correo.toLowerCase() === "admin@usa.edu.co"
+            ? [h("a", { class: "btn btn-ghost", href: "#/admin" }, "Administración")]
+            : []),
 
           h(
             "button",
