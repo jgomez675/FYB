@@ -81,7 +81,7 @@
 
       const portada = h("section", { class: "fyb-hero" },
         h("div", { class: "fyb-hero-copy" },
-          h("span", { class: "fyb-eyebrow" }, "CONECTAMOS PERSONAS CON LO QUE IMPORTA"),
+          h("span", { class: "fyb-eyebrow" }, "Conectamos personas con lo que importa"),
           h("h1", {}, "Un objeto puede volver a encontrar su dueño."),
           h("p", { class: "fyb-hero-lede" }, "Explora los reportes de la comunidad universitaria o publica lo que perdiste o encontraste. Entre todos hacemos que vuelva a casa."),
           h("div", { class: "fyb-hero-actions" },
@@ -109,7 +109,7 @@
 
       const encabezadoListado = h("div", { class: "fyb-section-heading" },
         h("div", {},
-          h("span", { class: "fyb-eyebrow fyb-eyebrow-muted" }, "COMUNIDAD FYB"),
+          h("span", { class: "fyb-eyebrow fyb-eyebrow-muted" }, "Comunidad FYB"),
           h("h2", {}, "Explorar publicaciones"),
           h("p", {}, "Encuentra coincidencias usando el buscador y los filtros.")
         ),
@@ -131,14 +131,15 @@
         ? objeto.descripcion.slice(0, 100).trimEnd() + "..."
         : objeto.descripcion;
 
-      const estadoClase = objeto.estado === "Encontrado" ? "tag-found" : "tag-lost";
+      const ESTADOS = { Perdido: ["tag-bad", "Perdido"], Encontrado: ["tag-ok", "Encontrado"], EN_CONTACTO: ["tag-info", "En contacto"], PENDIENTE_ENTREGA: ["tag-warn", "Pendiente de entrega"], DEVUELTO: ["tag-neutral", "Devuelto"] };
+      const [estadoClase, estadoTexto] = ESTADOS[objeto.estado] || ESTADOS.Perdido;
 
       return h("article", { class: "card obj" },
         imagenObjeto(objeto, "obj-media"),
         h("div", { class: "obj-body" },
           h("div", { class: "obj-tags" },
             h("span", { class: "tag tag-category" }, objeto.categoria || "Otros"),
-            h("span", { class: "tag " + estadoClase }, objeto.estado || "Perdido")
+            h("span", { class: "tag " + estadoClase }, estadoTexto)
           ),
           h("h2", { class: "obj-name" }, objeto.nombre),
           h("p", { class: "obj-desc" }, resumen),

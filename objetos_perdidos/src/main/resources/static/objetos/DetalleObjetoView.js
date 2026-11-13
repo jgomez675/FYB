@@ -40,138 +40,24 @@
 
       ponerTitulo(objeto.nombre);
 
-      const asunto = encodeURIComponent(
-        App.config.name + ": " + objeto.nombre
+      const mensaje = h("p", { class: "msg", role: "alert" });
+      const explicacion = h("textarea", { class: "control", rows: "5", maxLength: "2000", placeholder: "Describe detalles que permitan reconocer que el objeto es tuyo: contenido, marcas, características, lugar donde lo perdiste, etc." });
+      const enviar = h("button", { class: "btn btn-primary", type: "button" }, "Enviar solicitud de reclamación");
+      const zonaContacto = h("div", { class: "field" },
+        h("label", {}, "¿Crees que este objeto es tuyo?"),
+        h("p", { class: "muted" }, "Cuéntale al propietario por qué reconoces el objeto. Tu solicitud será revisada manualmente; no se compara una respuesta exacta."),
+        explicacion, enviar, mensaje
       );
-
-      const mensaje = h(
-        "p",
-        {
-          class: "msg",
-          role: "alert"
-        }
-      );
-
-      const caracteristica = h(
-        "textarea",
-        {
-          class: "control",
-          rows: "3",
-          placeholder: "Escribe una característica que solo el dueño debería conocer..."
-        }
-      );
-
-      const verificar = h(
-        "button",
-        {
-          class: "btn btn-primary",
-          type: "button"
-        },
-        "Verificar propiedad"
-      );
-
-      const formularioVerificacion = h(
-        "div",
-        {
-          class: "field"
-        },
-        h(
-          "label",
-          {
-            for: "caracteristica-verificacion"
-          },
-          "Característica del objeto"
-        ),
-        caracteristica
-      );
-
-      const zonaContacto = h(
-        "div",
-        {},
-        formularioVerificacion,
-        verificar,
-        mensaje
-      );
-
-      verificar.addEventListener(
-        "click",
-        async () => {
-
-          if (!caracteristica.value.trim()) {
-            mostrarMensaje(
-              mensaje,
-              "Debes ingresar una característica del objeto.",
-              "error"
-            );
-            return;
-          }
-
-          ocupado(verificar, true);
-
-          try {
-            const resultado =
-              await ObjetosApi.verificarCaracteristica(
-                objeto.id,
-                caracteristica.value
-              );
-
-            if (resultado.verificado) {
-
-              mostrarMensaje(
-                mensaje,
-                "La característica coincide. Puedes continuar con la reclamación.",
-                "success"
-              );
-
-              verificar.remove();
-
-              caracteristica.disabled = true;
-
-              zonaContacto.appendChild(
-                h(
-                  "a",
-                  {
-                    class: "btn btn-primary",
-                    href:
-                      "mailto:" +
-                      objeto.correoUsuario +
-                      "?subject=" +
-                      asunto
-                  },
-                  "Contactar a quien lo publicó"
-                )
-              );
-
-            } else {
-
-              mostrarMensaje(
-                mensaje,
-                resultado.mensaje,
-                "error"
-              );
-            }
-
-          } catch (error) {
-
-            if (error.estado === 401) {
-              mostrarMensaje(
-                mensaje,
-                error.message,
-                "error"
-              );
-            } else {
-              mostrarMensaje(
-                mensaje,
-                error.message,
-                "error"
-              );
-            }
-
-          } finally {
-            ocupado(verificar, false);
-          }
-        }
-      );
+      enviar.addEventListener("click", async () => {
+        if (explicacion.value.trim().length < 15) { mostrarMensaje(mensaje, "Escribe una explicación un poco más detallada (mínimo 15 caracteres).", "error"); return; }
+        ocupado(enviar, true);
+        try {
+          const resultado = await ObjetosApi.enviarReclamacion(objeto.id, explicacion.value);
+          if (resultado.ok) { mostrarMensaje(mensaje, "Solicitud enviada. El propietario revisará tu explicación.", "success"); enviar.remove(); explicacion.disabled = true; }
+          else mostrarMensaje(mensaje, resultado.mensaje, "error");
+        } catch (error) { mostrarMensaje(mensaje, error.message, "error"); }
+        finally { ocupado(enviar, false); }
+      });
 
       const reporteMensaje = h("p", { class: "msg", role: "alert" });
       const motivo = h("select", { class: "control" },

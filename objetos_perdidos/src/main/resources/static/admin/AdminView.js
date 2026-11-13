@@ -14,6 +14,7 @@
       const reportes = h("section", { class: "card admin-card" });
       const usuarios = h("section", { class: "card admin-card" });
       const objetos = h("section", { class: "card admin-card" });
+      const categoriaPanel = h("section", { class: "card admin-card admin-category-panel" });
       const busquedaObjetos = h("input", {
         class: "admin-filter-input",
         type: "search",
@@ -46,24 +47,53 @@
       const cargar = async () => {
         aviso.textContent = "";
         try {
-          const [resumen, datosReportes, datosUsuarios, datosObjetos] = await Promise.all([
+          const [resumen, datosReportes, datosUsuarios, datosObjetos, analitica] = await Promise.all([
             pedir("GET", "/api/admin/resumen"),
             pedir("GET", "/api/admin/reportes"),
             pedir("GET", "/api/admin/usuarios"),
-            pedir("GET", rutaObjetos())
+            pedir("GET", rutaObjetos()),
+            pedir("GET", "/api/admin/analitica")
           ]);
           pintarObjetos(datosObjetos.objetos || []);
           estadisticas.replaceChildren(
             ...[
-              ["Objetos publicados", resumen.totalObjetos],
-              ["Objetos encontrados", resumen.encontrados],
-              ["Objetos devueltos", resumen.devueltos],
+              ["Usuarios registrados", analitica.usuariosRegistrados],
+              ["Publicaciones activas", analitica.publicaciones],
+              ["Objetos recuperados", analitica.objetosRecuperados],
+              ["Reclamaciones", analitica.reclamaciones],
+              ["Reclamaciones pendientes", analitica.reclamacionesPendientes],
+              ["Reclamaciones aprobadas", analitica.reclamacionesAprobadas],
+              ["Reclamaciones rechazadas", analitica.reclamacionesRechazadas],
               ["Reportes pendientes", resumen.reportesPendientes]
             ].map(([titulo, valor]) => h("article", { class: "card admin-stat" },
               h("span", { class: "admin-stat-label" }, titulo),
-              h("strong", {}, String(valor))
+              h("strong", {}, String(valor == null ? 0 : valor))
             ))
           );
+          const categorias = Object.entries(analitica.categorias || {})
+            .sort((a, b) => b[1] - a[1]);
+          categoriaPanel.replaceChildren(
+            h("h2", {}, "Categorías más frecuentes"),
+            h("p", { class: "admin-muted" }, "Distribución de publicaciones visibles por categoría.")
+          );
+          if (categorias.length) {
+            const maximo = Math.max(1, ...categorias.map(x => Number(x[1]) || 0));
+            categorias.forEach(([nombre, cantidad]) => {
+              const barra = h("div", { class: "admin-category-row" },
+                h("div", { class: "admin-category-label" },
+                  h("span", {}, nombre),
+                  h("strong", {}, String(cantidad))
+                ),
+                h("div", { class: "admin-category-track" },
+                  h("span", { class: "admin-category-fill", style: "width:" + (Number(cantidad) / maximo * 100) + "%" })
+                )
+              );
+              categoriaPanel.append(barra);
+            });
+          } else {
+            categoriaPanel.append(h("p", { class: "admin-muted" }, "Aún no hay publicaciones para analizar."));
+          }
+
 
           const listaReportes = (datosReportes.reportes || []).map(r => {
             const tarjeta = h("article", { class: "admin-row" },
@@ -72,7 +102,7 @@
                 h("p", {}, "Motivo: " + r.motivo),
                 h("p", {}, "Detalle: " + (r.detalle || "Sin detalle adicional")),
                 h("p", { class: "admin-muted" }, "Reportado por: " + r.correoReportante + " · " + r.fecha),
-                h("span", { class: "tag " + (r.estado === "PENDIENTE" ? "tag-lost" : "tag-found") }, r.estado)
+                h("span", { class: "tag " + (r.estado === "PENDIENTE" ? "tag-warn" : "tag-neutral") }, r.estado)
               )
             );
             if (r.estado === "PENDIENTE") {
@@ -95,7 +125,7 @@
               h("div", { class: "admin-row-main" },
                 h("h3", {}, u.nombre),
                 h("p", {}, u.correo),
-                h("span", { class: "tag " + (u.bloqueado ? "tag-lost" : "tag-found") }, u.bloqueado ? "Bloqueado" : "Activo")
+                h("span", { class: "tag " + (u.bloqueado ? "tag-bad" : "tag-ok") }, u.bloqueado ? "Bloqueado" : "Activo")
               )
             );
             if (u.correo.toLowerCase() !== usuario.correo.toLowerCase()) {
@@ -162,12 +192,12 @@
           const contenido = h("div", { class: "admin-object-content" },
             h("div", { class: "admin-object-heading" },
               h("h3", {}, "#" + o.id + " · " + o.nombre),
-              h("span", { class: "tag " + (o.oculto ? "tag-lost" : "tag-found") },
+              h("span", { class: "tag " + (o.oculto ? "tag-warn" : "tag-ok") },
                 o.oculto ? "Oculto" : "Visible")
             ),
             h("p", {}, o.descripcion || "Sin descripción"),
             h("p", { class: "admin-muted" },
-              "Categoría: " + (o.categoria || "Otros") + " · Estado: " + (o.estado || "Sin estado")),
+              "Categoría: " + (o.categoria || "Otros") + " · Estado: " + ({ EN_CONTACTO: "En contacto", PENDIENTE_ENTREGA: "Pendiente de entrega", DEVUELTO: "Devuelto" })[o.estado] || o.estado || "Sin estado"),
             h("p", { class: "admin-muted" },
               "Lugar: " + (o.lugar || "No especificado") + " · Fecha: " + (o.fecha || "Sin fecha")),
             h("p", { class: "admin-muted" }, "Publicado por: " + (o.correoUsuario || "Sin correo"))
@@ -279,7 +309,7 @@
             h("p", { class: "lede" }, "Estadísticas, reportes y control de usuarios.")),
           recargar
         ),
-        aviso, estadisticas, objetos, reportes, usuarios
+        aviso, estadisticas, categoriaPanel, objetos, reportes, usuarios
       );
     }
   }

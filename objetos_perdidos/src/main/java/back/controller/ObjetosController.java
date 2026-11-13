@@ -88,6 +88,32 @@ public class ObjetosController {
         );
     }
 
+    /** Solo el usuario que publicó el objeto puede cambiar su estado de seguimiento. */
+    @PutMapping("/{id}/estado")
+    public Map<String, Object> actualizarEstado(
+            @PathVariable int id,
+            @RequestBody Map<String, Object> cuerpo,
+            HttpServletRequest request) {
+
+        SessionManager.Sesion sesion = requerirSesion(request);
+        ObjetoPerdido objeto = ObjetoPerdidoService.obtenerObjeto(id);
+        if (objeto == null) {
+            throw new RuntimeException("No encontramos este objeto.");
+        }
+        if (objeto.getCorreoUsuario() == null ||
+                !objeto.getCorreoUsuario().equalsIgnoreCase(sesion.correo())) {
+            throw new RuntimeException("Solo quien publicó el objeto puede cambiar su estado.");
+        }
+
+        String estado = texto(cuerpo, "estado");
+        String resultado = ObjetoPerdidoService.actualizarEstado(id, estado);
+        if (!"OK".equals(resultado)) {
+            throw new RuntimeException(resultado);
+        }
+        return Map.of("ok", true, "estado", ObjetoPerdidoService.obtenerObjeto(id).getEstado(),
+                "mensaje", "El estado de la publicación se actualizó correctamente.");
+    }
+
     @GetMapping("/{id}")
     public Map<String, Object> detalleObjeto(
             @PathVariable int id,

@@ -161,6 +161,10 @@ public class ObjetoPerdido {
         this.correoDescubridor = correoDescubridor;
     }
 
+    public void actualizarEstado(String estado) {
+        this.estado = estado;
+    }
+
     public void marcarComoDevuelto(String correoEstudiante) {
         this.estado = "DEVUELTO";
         this.correoEstudianteDevuelve = correoEstudiante;

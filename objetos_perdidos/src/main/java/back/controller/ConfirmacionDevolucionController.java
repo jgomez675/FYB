@@ -120,9 +120,11 @@ public class ConfirmacionDevolucionController {
                         objeto.getCategoria()
                 );
 
+        // Quien publica es quien encontró y custodió el objeto; esa persona
+        // recibe los puntos por completar la devolución. El reclamante es el dueño.
         int nuevoSaldo =
                 PuntosService.agregarPuntosPorDevolucion(
-                        correoDescubridor,
+                        objeto.getCorreoUsuario(),
                         objeto.getCategoria(),
                         objeto.getNombre()
                 );
@@ -134,9 +136,10 @@ public class ConfirmacionDevolucionController {
                 "saldoPuntos", nuevoSaldo,
                 "categoria", objeto.getCategoria(),
                 "correoDescubridor", correoDescubridor,
+                "correoPublicador", objeto.getCorreoUsuario(),
                 "mensaje",
                 "Devolución confirmada correctamente. "
-                        + "El estudiante que encontró el objeto recibió "
+                        + "Quien publicó el objeto y lo devolvió recibió "
                         + puntosGanados
                         + " puntos."
         );

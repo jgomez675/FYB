@@ -17,6 +17,20 @@
       throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
     }
 
+    static async actualizarEstado(id, estado) {
+      const r = await ApiClient.solicitar("PUT", "/api/objetos/" + encodeURIComponent(id) + "/estado", { estado });
+      if (r.estado === 200 && r.datos && r.datos.ok) return r.datos;
+      if (r.estado === 401) throw new ErrorApi(ApiClient.mensajeDe(r), 401);
+      return { ok: false, mensaje: ApiClient.mensajeDe(r) };
+    }
+
+    static async confirmarDevolucion(id) {
+      const r = await ApiClient.solicitar("POST", "/api/objetos/" + encodeURIComponent(id) + "/confirmar-devolucion");
+      if (r.estado === 200 && r.datos) return r.datos;
+      if (r.estado === 401) throw new ErrorApi(ApiClient.mensajeDe(r), 401);
+      return { ok: false, mensaje: ApiClient.mensajeDe(r) };
+    }
+
     static async obtenerObjeto(id) {
       const r = await ApiClient.solicitar("GET", "/api/objetos/" + encodeURIComponent(id));
       if (r.estado === 200 && r.datos) return r.datos.objeto;
@@ -51,16 +65,30 @@
       return ApiClient.mensajeDe(r);
     }
 
-    static async verificarCaracteristica(id, caracteristica) {
-      const r = await ApiClient.solicitar(
-        "POST",
-        "/api/objetos/" + encodeURIComponent(id) + "/verificar",
-        { caracteristica }
-      );
-
-      if (r.estado === 200 && r.datos) return r.datos;
+    static async enviarReclamacion(objetoId, explicacion) {
+      const r = await ApiClient.solicitar("POST", "/api/reclamaciones", { objetoId, explicacion });
+      if (r.estado === 200 && r.datos && r.datos.ok) return r.datos;
       if (r.estado === 401) throw new ErrorApi(ApiClient.mensajeDe(r), 401);
-      return { ok: false, verificado: false, mensaje: ApiClient.mensajeDe(r) };
+      return { ok: false, mensaje: ApiClient.mensajeDe(r) };
+    }
+
+    static async obtenerReclamacionesRecibidas() {
+      const r = await ApiClient.solicitar("GET", "/api/reclamaciones/recibidas");
+      if (r.estado === 200 && r.datos) return r.datos.reclamaciones || [];
+      throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
+    }
+
+    static async obtenerReclamacionesEnviadas() {
+      const r = await ApiClient.solicitar("GET", "/api/reclamaciones/enviadas");
+      if (r.estado === 200 && r.datos) return r.datos.reclamaciones || [];
+      throw new ErrorApi(ApiClient.mensajeDe(r), r.estado);
+    }
+
+    static async decidirReclamacion(id, decision, respuesta = "") {
+      const r = await ApiClient.solicitar("POST", "/api/reclamaciones/" + encodeURIComponent(id) + "/decision", { decision, respuesta });
+      if (r.estado === 200 && r.datos && r.datos.ok) return r.datos;
+      if (r.estado === 401) throw new ErrorApi(ApiClient.mensajeDe(r), 401);
+      return { ok: false, mensaje: ApiClient.mensajeDe(r) };
     }
 
     static async reportarPublicacion(objetoId, motivo, detalle) {

@@ -24,12 +24,14 @@
     ObjetosView,
     DetalleObjetoView,
     RegistrarObjetoView,
-    MisPublicacionesView
+    MisPublicacionesView,
+    MisReclamacionesView
   } = App.front.objetos;
 
   const { PuntosView, HistorialPuntosView } = App.front.puntos;
   const { PerfilView } = App.front.perfil;
   const { AdminView } = App.front.admin;
+  const { NotificacionesView } = App.front.notificaciones;
 
   const rutas = [
     {
@@ -66,6 +68,16 @@
       patron: /^#\/mis-publicaciones$/,
       requiereSesion: true,
       vista: MisPublicacionesView
+    },
+    {
+      patron: /^#\/mis-reclamaciones$/,
+      requiereSesion: true,
+      vista: MisReclamacionesView
+    },
+    {
+      patron: /^#\/notificaciones$/,
+      requiereSesion: true,
+      vista: NotificacionesView
     },
     {
       patron: /^#\/puntos$/,

@@ -8,6 +8,7 @@ import back.model.Usuario;
 import back.service.AuthService;
 import back.service.ObjetoPerdidoService;
 import back.service.ReportePublicacionService;
+import back.service.ReclamacionesService;
 import back.persistence.repository.ObjetoRepository;
 import back.persistence.repository.UsuarioRepository;
 import back.persistence.repository.MovimientoPuntosRepository;
@@ -46,6 +47,35 @@ public class AdminController {
                 .filter(r -> "PENDIENTE".equalsIgnoreCase(r.getEstado())).count();
         return Map.of("totalObjetos", visibles, "encontrados", encontrados,
                 "devueltos", devueltos, "reportesPendientes", reportesPendientes);
+    }
+
+    /** Indicadores ampliados para el tablero administrativo. */
+    @GetMapping("/analitica")
+    public Map<String,Object> analitica(HttpServletRequest request) {
+        requerirAdmin(request);
+        List<ObjetoPerdido> objetos = ObjetoPerdidoService.obtenerObjetos();
+        Map<String,Long> categorias = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (ObjetoPerdido o : objetos) {
+            if (o.isOculto()) continue;
+            String categoria = (o.getCategoria() == null || o.getCategoria().isBlank())
+                    ? "Otros" : o.getCategoria();
+            categorias.merge(categoria, 1L, Long::sum);
+        }
+        List<ReclamacionesService.Reclamacion> reclamaciones = ReclamacionesService.todas();
+        long pendientes = reclamaciones.stream().filter(r -> "PENDIENTE".equals(r.estado())).count();
+        long aprobadas = reclamaciones.stream().filter(r -> "APROBADA".equals(r.estado())).count();
+        long rechazadas = reclamaciones.stream().filter(r -> "RECHAZADA".equals(r.estado())).count();
+        long devueltos = objetos.stream().filter(o -> !o.isOculto() && o.estaDevuelto()).count();
+        Map<String,Object> resultado = new LinkedHashMap<>();
+        resultado.put("usuariosRegistrados", AuthService.listarUsuarios().size());
+        resultado.put("publicaciones", objetos.stream().filter(o -> !o.isOculto()).count());
+        resultado.put("objetosRecuperados", devueltos);
+        resultado.put("reclamaciones", reclamaciones.size());
+        resultado.put("reclamacionesPendientes", pendientes);
+        resultado.put("reclamacionesAprobadas", aprobadas);
+        resultado.put("reclamacionesRechazadas", rechazadas);
+        resultado.put("categorias", categorias);
+        return resultado;
     }
 
     /** Lista todas las publicaciones para moderación, incluidas las ocultas. */

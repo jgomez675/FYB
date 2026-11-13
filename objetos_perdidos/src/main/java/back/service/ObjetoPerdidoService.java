@@ -402,6 +402,37 @@ public class ObjetoPerdidoService {
         }
     }
 
+    /** Actualiza el estado operativo de una publicación y revierte el cambio si falla la persistencia. */
+    public static synchronized String actualizarEstado(int id, String nuevoEstado) {
+        ObjetoPerdido objeto = obtenerObjeto(id);
+        if (objeto == null) return "No encontramos este objeto.";
+        if (objeto.estaDevuelto()) return "Este objeto ya fue devuelto y su estado no se puede modificar.";
+
+        String estadoNormalizado;
+        if ("EN_CONTACTO".equalsIgnoreCase(nuevoEstado) || "En contacto".equalsIgnoreCase(nuevoEstado)) {
+            estadoNormalizado = "EN_CONTACTO";
+        } else if ("PENDIENTE_ENTREGA".equalsIgnoreCase(nuevoEstado) || "Pendiente de entrega".equalsIgnoreCase(nuevoEstado)) {
+            estadoNormalizado = "PENDIENTE_ENTREGA";
+        } else if ("ENCONTRADO".equalsIgnoreCase(nuevoEstado) || "Encontrado".equalsIgnoreCase(nuevoEstado)) {
+            estadoNormalizado = "Encontrado";
+        } else if ("PERDIDO".equalsIgnoreCase(nuevoEstado) || "Perdido".equalsIgnoreCase(nuevoEstado)) {
+            estadoNormalizado = "Perdido";
+        } else {
+            return "Estado no válido.";
+        }
+
+        String anterior = objeto.getEstado();
+        objeto.actualizarEstado(estadoNormalizado);
+        try {
+            guardarObjetos();
+            return "OK";
+        } catch (IOException e) {
+            objeto.actualizarEstado(anterior);
+            System.err.println("No se pudo actualizar el estado del objeto " + id + ": " + e.getMessage());
+            return "No se pudo guardar el nuevo estado.";
+        }
+    }
+
     /*
      * synchronized: la revisión "¿ya estaba devuelto?" y la marca van juntas, así dos
      * confirmaciones al mismo tiempo no pueden dar los puntos dos veces.
