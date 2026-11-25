@@ -64,7 +64,7 @@ Ejecuta los comandos desde la raíz del repositorio, ya que la ubicación de `da
 
 La aplicación Android se conecta al backend que se ejecuta en un computador. Por eso, cada persona que prepare su propio APK debe configurar la dirección IP de su computador antes de compilarlo.
 
-Sigue la guía completa en **[README-ANDROID.md](README-ANDROID.md)**. En resumen:
+Sigue la guía completa en **[README-ANDROID.md](README-ANDROID.md)**. Para usuarios que solo van a instalar el APK y configurar la IP desde el celular, consulta también **[README-CONFIGURACION-ANDROID.md](README-CONFIGURACION-ANDROID.md)**. En resumen:
 
 1. Conecta el celular y el computador a la misma red local.
 2. Configura la IP del computador en `android-app/www/servicios/ApiClient.js`.

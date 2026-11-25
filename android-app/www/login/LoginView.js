@@ -10,7 +10,6 @@
   class LoginView {
     async mostrar() {
       ponerTitulo("Iniciar sesión");
-
       const mensaje = h("p", { class: "msg", role: "alert" });
       const correo = campo({ id: "correo", etiqueta: "Correo institucional", type: "email", autocomplete: "username", placeholder: "usuario@" + App.config.emailDomain });
       const contrasena = campo({ id: "clave", etiqueta: "Contraseña", type: "password", autocomplete: "current-password" });
@@ -19,14 +18,9 @@
 
       formulario.addEventListener("submit", async (evento) => {
         evento.preventDefault();
-
         const correoIngresado = correo.control.value.trim();
         const contrasenaIngresada = contrasena.control.value;
-
-        if (!correoIngresado || !contrasenaIngresada) {
-          return mostrarMensaje(mensaje, "Completa todos los campos.", "error");
-        }
-
+        if (!correoIngresado || !contrasenaIngresada) return mostrarMensaje(mensaje, "Completa todos los campos.", "error");
         ocupado(iniciarSesion, true);
         try {
           const usuario = await AuthApi.iniciarSesion(correoIngresado, contrasenaIngresada);
@@ -48,6 +42,7 @@
         h("p", { class: "tagline" }, App.config.tagline),
         tomarAviso(),
         formulario,
+        h("p", { class: "alt" }, h("a", { href: "#/configuracion-servidor" }, "Configurar servidor")),
         h("p", { class: "alt" }, h("a", { href: "#/recuperar" }, "¿Olvidaste tu contraseña?")),
         h("p", { class: "alt" }, "¿No tienes una cuenta? ", h("a", { href: "#/registro" }, "Regístrate"))
       );
